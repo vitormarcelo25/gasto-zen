@@ -60,7 +60,29 @@ export default function TransactionModal({
     if (transactionToEdit?.cardId) return transactionToEdit.cardId;
     return cards[0]?.id || null;
   });
-  const [dateChoice, setDateChoice] = useState(() => resolveDateChoice(transactionToEdit));
+  const [dateChoice, setDateChoice] = useState(() => resolveDateChoice(transactionToEdit)); // 'today' | 'yesterday' | 'original' | 'custom'
+  // Data manual (DD/MM/AAAA) para lançar faturas/compras antigas
+  const [customDay, setCustomDay] = useState(() => {
+    if (transactionToEdit?.date) {
+      const d = new Date(transactionToEdit.date);
+      if (!Number.isNaN(d.getTime())) return String(d.getDate()).padStart(2, '0');
+    }
+    return String(new Date().getDate()).padStart(2, '0');
+  });
+  const [customMonth, setCustomMonth] = useState(() => {
+    if (transactionToEdit?.date) {
+      const d = new Date(transactionToEdit.date);
+      if (!Number.isNaN(d.getTime())) return String(d.getMonth() + 1).padStart(2, '0');
+    }
+    return String(new Date().getMonth() + 1).padStart(2, '0');
+  });
+  const [customYear, setCustomYear] = useState(() => {
+    if (transactionToEdit?.date) {
+      const d = new Date(transactionToEdit.date);
+      if (!Number.isNaN(d.getTime())) return String(d.getFullYear());
+    }
+    return String(new Date().getFullYear());
+  });
   const [recurrence, setRecurrence] = useState(transactionToEdit?.recurrence || 'single'); // 'single' | 'weekly' | 'monthly'
 
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
@@ -111,6 +133,20 @@ export default function TransactionModal({
       tDate.setDate(tDate.getDate() - 1);
     } else if (dateChoice === 'original' && transactionToEdit && transactionToEdit.date) {
       tDate = new Date(transactionToEdit.date);
+    } else if (dateChoice === 'custom') {
+      const d = parseInt(customDay, 10);
+      const m = parseInt(customMonth, 10);
+      const y = parseInt(customYear, 10);
+      if (!d || !m || !y || d < 1 || d > 31 || m < 1 || m > 12 || y < 2000 || y > 2100) {
+        Alert.alert('Atenção', 'Informe uma data válida (DD/MM/AAAA).');
+        return;
+      }
+      const candidate = new Date(y, m - 1, d, 12);
+      if (candidate.getMonth() !== m - 1 || candidate.getDate() !== d) {
+        Alert.alert('Atenção', 'Essa data não existe. Verifique dia e mês.');
+        return;
+      }
+      tDate = candidate;
     }
 
     const categoryItem = categories.find(c => c.id === category) || categories[0];
@@ -454,6 +490,14 @@ export default function TransactionModal({
                   Ontem
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setDateChoice('custom')} 
+                style={[styles.smallToggleBtn, dateChoice === 'custom' && { backgroundColor: theme.card }]}
+              >
+                <Text style={[styles.smallToggleText, { color: dateChoice === 'custom' ? theme.textMain : theme.textSub }]}>
+                  Outra
+                </Text>
+              </TouchableOpacity>
               {isEditing && originalDateLabel && (
                 <TouchableOpacity 
                   onPress={() => setDateChoice('original')} 
@@ -465,6 +509,47 @@ export default function TransactionModal({
                 </TouchableOpacity>
               )}
             </View>
+
+            {/* Campos de data manual (para faturas/compras antigas) */}
+            {dateChoice === 'custom' && (
+              <View style={[styles.customDateRow, { backgroundColor: theme.bg, borderColor: theme.border }]}>
+                <TextInput
+                  style={[styles.customDateInput, { color: theme.textMain, borderColor: theme.border }]}
+                  value={customDay}
+                  onChangeText={(v) => setCustomDay(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  placeholder="DD"
+                  placeholderTextColor={theme.textSub}
+                  selectTextOnFocus
+                />
+                <Text style={{ color: theme.textSub, fontWeight: 'bold' }}>/</Text>
+                <TextInput
+                  style={[styles.customDateInput, { color: theme.textMain, borderColor: theme.border }]}
+                  value={customMonth}
+                  onChangeText={(v) => setCustomMonth(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  placeholder="MM"
+                  placeholderTextColor={theme.textSub}
+                  selectTextOnFocus
+                />
+                <Text style={{ color: theme.textSub, fontWeight: 'bold' }}>/</Text>
+                <TextInput
+                  style={[styles.customDateInputYear, { color: theme.textMain, borderColor: theme.border }]}
+                  value={customYear}
+                  onChangeText={(v) => setCustomYear(v.replace(/[^0-9]/g, '').slice(0, 4))}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  placeholder="AAAA"
+                  placeholderTextColor={theme.textSub}
+                  selectTextOnFocus
+                />
+                <Text style={[styles.customDateHint, { color: theme.textSub }]}>
+                  compra antiga entra na fatura certa
+                </Text>
+              </View>
+            )}
 
             {/* Repetição */}
             <Text style={[styles.inputLabel, { color: theme.textSub }]}>REPETIÇÃO</Text>
@@ -657,6 +742,39 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     marginTop: 8,
+  },
+  customDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 8,
+    gap: 6,
+  },
+  customDateInput: {
+    width: 44,
+    height: 38,
+    borderWidth: 1,
+    borderRadius: 10,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  customDateInputYear: {
+    width: 58,
+    height: 38,
+    borderWidth: 1,
+    borderRadius: 10,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  customDateHint: {
+    fontSize: 10,
+    marginLeft: 4,
+    flex: 1,
   },
   smallToggle: {
     flexDirection: 'row',
