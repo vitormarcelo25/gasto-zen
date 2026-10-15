@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants/categories';
 import CurrencyInput from './CurrencyInput';
 import { floatToMasked, maskedToFloat } from '../utils/mask';
+import { RECURRENCE_HORIZON_MONTHS } from '../utils/recurrence';
 
 const QUICK_EXPENSES = ['Supermercado', 'Almoço', 'Uber', 'Farmácia', 'Combustível', 'Internet', 'Lazer'];
 const QUICK_INCOMES = ['Salário', 'Freelance', 'Pix Recebido', 'Bônus', 'Venda'];
@@ -25,7 +26,7 @@ export default function TransactionModal({
   const [amountFloat, setAmountFloat] = useState(0);
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0].id);
-  const [dateChoice, setDateChoice] = useState('today'); // 'today' | 'yesterday'
+  const [dateChoice, setDateChoice] = useState('today'); // 'today' | 'yesterday' | 'original'
   const [recurrence, setRecurrence] = useState('single'); // 'single' | 'weekly' | 'monthly'
 
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
@@ -41,16 +42,18 @@ export default function TransactionModal({
         setCategory(transactionToEdit.categoryId || (transactionToEdit.type === 'expense' ? EXPENSE_CATEGORIES[0].id : INCOME_CATEGORIES[0].id));
         setRecurrence(transactionToEdit.recurrence || 'single');
 
-        // Determinar se data é hoje, ontem ou outra
+        // Determinar se data é hoje, ontem ou outra data preservada
         if (transactionToEdit.date) {
           const tDate = new Date(transactionToEdit.date);
           const today = new Date();
           const yesterday = new Date();
           yesterday.setDate(today.getDate() - 1);
-          if (tDate.toDateString() === yesterday.toDateString()) {
+          if (tDate.toDateString() === today.toDateString()) {
+            setDateChoice('today');
+          } else if (tDate.toDateString() === yesterday.toDateString()) {
             setDateChoice('yesterday');
           } else {
-            setDateChoice('today');
+            setDateChoice('original');
           }
         } else {
           setDateChoice('today');
@@ -110,10 +113,10 @@ export default function TransactionModal({
     }
 
     let tDate = new Date();
-    if (transactionToEdit && transactionToEdit.date && dateChoice !== 'today' && dateChoice !== 'yesterday') {
-      tDate = new Date(transactionToEdit.date);
-    } else if (dateChoice === 'yesterday') {
+    if (dateChoice === 'yesterday') {
       tDate.setDate(tDate.getDate() - 1);
+    } else if (dateChoice === 'original' && transactionToEdit && transactionToEdit.date) {
+      tDate = new Date(transactionToEdit.date);
     }
 
     const categoryItem = categories.find(c => c.id === category) || categories[0];
@@ -139,6 +142,16 @@ export default function TransactionModal({
   };
 
   const isEditing = !!transactionToEdit;
+
+  // Rótulo dd/MM da data original (para preservar datas antigas na edição)
+  const originalDateLabel = (() => {
+    if (!isEditing || !transactionToEdit.date) return '';
+    const d = new Date(transactionToEdit.date);
+    if (Number.isNaN(d.getTime())) return '';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}`;
+  })();
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
@@ -269,52 +282,72 @@ export default function TransactionModal({
               })}
             </View>
 
-            {/* Opções de Data e Recorrência */}
-            <View style={styles.rowOptions}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={[styles.inputLabel, { color: theme.textSub }]}>QUANDO?</Text>
-                <View style={[styles.smallToggle, { backgroundColor: theme.bg }]}>
-                  <TouchableOpacity 
-                    onPress={() => setDateChoice('today')} 
-                    style={[styles.smallToggleBtn, dateChoice === 'today' && { backgroundColor: theme.card }]}
-                  >
-                    <Text style={[styles.smallToggleText, { color: dateChoice === 'today' ? theme.textMain : theme.textSub }]}>
-                      Hoje
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={() => setDateChoice('yesterday')} 
-                    style={[styles.smallToggleBtn, dateChoice === 'yesterday' && { backgroundColor: theme.card }]}
-                  >
-                    <Text style={[styles.smallToggleText, { color: dateChoice === 'yesterday' ? theme.textMain : theme.textSub }]}>
-                      Ontem
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={{ flex: 1, marginLeft: 8 }}>
-                <Text style={[styles.inputLabel, { color: theme.textSub }]}>REPETIÇÃO</Text>
-                <View style={[styles.smallToggle, { backgroundColor: theme.bg }]}>
-                  <TouchableOpacity 
-                    onPress={() => setRecurrence('single')} 
-                    style={[styles.smallToggleBtn, recurrence === 'single' && { backgroundColor: theme.card }]}
-                  >
-                    <Text style={[styles.smallToggleText, { color: recurrence === 'single' ? theme.textMain : theme.textSub }]}>
-                      Única
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={() => setRecurrence('weekly')} 
-                    style={[styles.smallToggleBtn, recurrence === 'weekly' && { backgroundColor: theme.card }]}
-                  >
-                    <Text style={[styles.smallToggleText, { color: recurrence === 'weekly' ? theme.textMain : theme.textSub }]}>
-                      Semanal
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+            {/* Opções de Data */}
+            <Text style={[styles.inputLabel, { color: theme.textSub }]}>QUANDO?</Text>
+            <View style={[styles.smallToggle, { backgroundColor: theme.bg }]}>
+              <TouchableOpacity 
+                onPress={() => setDateChoice('today')} 
+                style={[styles.smallToggleBtn, dateChoice === 'today' && { backgroundColor: theme.card }]}
+              >
+                <Text style={[styles.smallToggleText, { color: dateChoice === 'today' ? theme.textMain : theme.textSub }]}>
+                  Hoje
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setDateChoice('yesterday')} 
+                style={[styles.smallToggleBtn, dateChoice === 'yesterday' && { backgroundColor: theme.card }]}
+              >
+                <Text style={[styles.smallToggleText, { color: dateChoice === 'yesterday' ? theme.textMain : theme.textSub }]}>
+                  Ontem
+                </Text>
+              </TouchableOpacity>
+              {isEditing && originalDateLabel && (
+                <TouchableOpacity 
+                  onPress={() => setDateChoice('original')} 
+                  style={[styles.smallToggleBtn, dateChoice === 'original' && { backgroundColor: theme.card }]}
+                >
+                  <Text style={[styles.smallToggleText, { color: dateChoice === 'original' ? theme.textMain : theme.textSub }]}>
+                    {originalDateLabel}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
+
+            {/* Repetição */}
+            <Text style={[styles.inputLabel, { color: theme.textSub }]}>REPETIÇÃO</Text>
+            <View style={[styles.smallToggle, { backgroundColor: theme.bg }]}>
+              <TouchableOpacity 
+                onPress={() => setRecurrence('single')} 
+                style={[styles.smallToggleBtn, recurrence === 'single' && { backgroundColor: theme.card }]}
+              >
+                <Text style={[styles.smallToggleText, { color: recurrence === 'single' ? theme.textMain : theme.textSub }]}>
+                  Única
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setRecurrence('weekly')} 
+                style={[styles.smallToggleBtn, recurrence === 'weekly' && { backgroundColor: theme.card }]}
+              >
+                <Text style={[styles.smallToggleText, { color: recurrence === 'weekly' ? theme.textMain : theme.textSub }]}>
+                  Semanal
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setRecurrence('monthly')} 
+                style={[styles.smallToggleBtn, recurrence === 'monthly' && { backgroundColor: theme.card }]}
+              >
+                <Text style={[styles.smallToggleText, { color: recurrence === 'monthly' ? theme.textMain : theme.textSub }]}>
+                  Mensal
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {recurrence !== 'single' && (
+              <Text style={[styles.recurrenceHint, { color: theme.textSub }]}>
+                Ao confirmar, serão criadas ocorrências automáticas para os próximos {RECURRENCE_HORIZON_MONTHS} meses.
+                Cada ocorrência pode ser editada ou excluída individualmente.
+              </Text>
+            )}
 
             {/* Botão de Envio */}
             <TouchableOpacity 
@@ -466,6 +499,11 @@ const styles = StyleSheet.create({
   rowOptions: {
     flexDirection: 'row',
     marginTop: 6,
+  },
+  recurrenceHint: {
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 8,
   },
   smallToggle: {
     flexDirection: 'row',

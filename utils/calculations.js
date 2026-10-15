@@ -1,6 +1,18 @@
 // Utilitários de cálculos financeiros e estatísticos para GastoZen
 
 /**
+ * Chave de data no fuso local (YYYY-MM-DD).
+ * Evita toISOString(), que converte para UTC e pode "andar" um dia
+ * para trás em fusos negativos (ex: Brasil, UTC-3).
+ */
+export const toDateKey = (date) => {
+  const d = new Date(date);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+};
+
+/**
  * Retorna se duas datas pertencem à mesma semana (considerando Segunda a Domingo).
  */
 export const isSameWeek = (date1, date2 = new Date()) => {
@@ -50,7 +62,7 @@ export const getCurrentWeekDays = (referenceDate = new Date()) => {
     d.setDate(monday.getDate() + i);
     days.push({
       date: d,
-      dateString: d.toISOString().split('T')[0],
+      dateString: toDateKey(d),
       dayName: dayLabels[i],
       dayOfMonth: d.getDate(),
       isToday: d.toDateString() === new Date().toDateString(),

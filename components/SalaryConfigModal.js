@@ -13,7 +13,8 @@ export default function SalaryConfigModal({
   onSaveSettings, 
   onResetData,
   theme,
-  currencySymbol 
+  currencySymbol,
+  formatMoney,
 }) {
   const [salaryType, setSalaryType] = useState('monthly'); // 'monthly' | 'weekly'
   const [baseSalary, setBaseSalary] = useState('');
@@ -67,17 +68,13 @@ export default function SalaryConfigModal({
     onClose();
   };
 
-  const calculatedWeekly = salaryType === 'monthly' && baseSalaryFloat > 0 
-    ? (baseSalaryFloat / 4).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : baseSalary;
+  const fmt = formatMoney || ((v) => `${currencySymbol} ${Number(v) || 0}`);
 
-  const calculatedMonthly = salaryType === 'weekly' && baseSalaryFloat > 0
-    ? (baseSalaryFloat * 4).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : baseSalary;
-
-  const dailyReference = salaryType === 'weekly' && baseSalaryFloat > 0
-    ? (baseSalaryFloat / 7).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : (baseSalaryFloat / 30).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const calculatedWeekly = fmt(baseSalaryFloat / 4);
+  const calculatedMonthly = fmt(baseSalaryFloat * 4);
+  const dailyReference = fmt(
+    salaryType === 'weekly' ? baseSalaryFloat / 7 : baseSalaryFloat / 30
+  );
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
@@ -154,13 +151,13 @@ export default function SalaryConfigModal({
                 <View style={{ flex: 1, gap: 3 }}>
                   <Text style={[styles.conversionText, { color: theme.textMain }]}>
                     {salaryType === 'monthly' 
-                      ? `Equivale a aprox. ${currencySymbol} ${calculatedWeekly} por semana (4 semanas)`
-                      : `Equivale a ${currencySymbol} ${calculatedMonthly} por mês (4 semanas × ${currencySymbol} ${baseSalary})`}
+                      ? `Equivale a aprox. ${calculatedWeekly} por semana (4 semanas)`
+                      : `Equivale a ${calculatedMonthly} por mês (4 semanas × ${fmt(baseSalaryFloat)})`}
                   </Text>
                   <Text style={[styles.conversionSub, { color: theme.textSub }]}>
                     {salaryType === 'weekly'
-                      ? `Meta diária base: ${currencySymbol} ${dailyReference} / dia (${currencySymbol} ${baseSalary} ÷ 7 dias)`
-                      : `Meta diária base: ${currencySymbol} ${dailyReference} / dia (${currencySymbol} ${baseSalary} ÷ 30 dias)`}
+                      ? `Meta diária base: ${dailyReference} / dia (${fmt(baseSalaryFloat)} ÷ 7 dias)`
+                      : `Meta diária base: ${dailyReference} / dia (${fmt(baseSalaryFloat)} ÷ 30 dias)`}
                   </Text>
                 </View>
               </View>
