@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   StyleSheet, Text, View, ScrollView, TouchableOpacity, 
-  TextInput, Modal, StatusBar, Platform
+  TextInput, Modal, StatusBar, Platform, Image
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
@@ -246,9 +246,10 @@ export default function App() {
           barStyle={isDarkMode ? 'light-content' : 'dark-content'} 
           backgroundColor={theme.bg} 
         />
-        <View style={[styles.logoBoxLarge, { backgroundColor: theme.green + '20' }]}>
-          <Feather name="feather" size={36} color={theme.green} />
-        </View>
+        <Image 
+          source={require('../assets/images/icon.png')} 
+          style={{ width: 64, height: 64, borderRadius: 18 }} 
+        />
         <Text style={[styles.headerTitle, { color: theme.textMain, marginTop: 14 }]}>
           Gasto<Text style={{ color: theme.green, fontWeight: '300' }}>Zen</Text>
         </Text>
@@ -269,9 +270,10 @@ export default function App() {
       {/* HEADER SUPERIOR */}
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <View style={styles.headerLeft}>
-          <View style={[styles.logoBox, { backgroundColor: theme.green + '20' }]}>
-            <Feather name="feather" size={22} color={theme.green} />
-          </View>
+          <Image 
+            source={require('../assets/images/icon.png')} 
+            style={{ width: 36, height: 36, borderRadius: 10, marginRight: 10 }} 
+          />
           <View>
             <Text style={[styles.headerTitle, { color: theme.textMain }]}>
               Gasto<Text style={{ color: theme.green, fontWeight: '300' }}>Zen</Text>

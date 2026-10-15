@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "gasto-zen",
+    "name": "GastoZen",
     "slug": "gasto-zen",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,10 +14,8 @@
     "android": {
       "package": "com.vitormatrix.gastozen",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#0A0F1D",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -34,9 +32,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#0A0F1D",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#0A0F1D"
           }
         }
       ],
