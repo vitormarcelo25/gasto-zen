@@ -33,6 +33,26 @@ export default function SalaryConfigModal({
     }
   }, [visible, settings]);
 
+  const handleToggleSalaryType = (newType) => {
+    if (newType === salaryType) return;
+    setSalaryType(newType);
+
+    // Converte automaticamente o valor para que mensal e semanal façam sentido proporcional
+    if (baseSalaryFloat > 0) {
+      if (newType === 'weekly') {
+        // Estava mensal, virou semanal: divide por 4
+        const converted = Math.round((baseSalaryFloat / 4) * 100) / 100;
+        setBaseSalaryFloat(converted);
+        setBaseSalary(floatToMasked(converted));
+      } else {
+        // Estava semanal, virou mensal: multiplica por 4
+        const converted = Math.round((baseSalaryFloat * 4) * 100) / 100;
+        setBaseSalaryFloat(converted);
+        setBaseSalary(floatToMasked(converted));
+      }
+    }
+  };
+
   const handleSave = () => {
     const salaryNum = baseSalaryFloat > 0 ? baseSalaryFloat : maskedToFloat(baseSalary);
     const goalNum = savingsGoalFloat > 0 ? savingsGoalFloat : maskedToFloat(savingsGoal);
@@ -48,12 +68,16 @@ export default function SalaryConfigModal({
   };
 
   const calculatedWeekly = salaryType === 'monthly' && baseSalaryFloat > 0 
-    ? (baseSalaryFloat / 4.33).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    ? (baseSalaryFloat / 4).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : baseSalary;
 
   const calculatedMonthly = salaryType === 'weekly' && baseSalaryFloat > 0
-    ? (baseSalaryFloat * 4.33).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    ? (baseSalaryFloat * 4).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : baseSalary;
+
+  const dailyReference = salaryType === 'weekly' && baseSalaryFloat > 0
+    ? (baseSalaryFloat / 7).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : (baseSalaryFloat / 30).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
@@ -65,7 +89,7 @@ export default function SalaryConfigModal({
               <View>
                 <Text style={[styles.title, { color: theme.textMain }]}>Configurar Salário & Metas</Text>
                 <Text style={[styles.subtitle, { color: theme.textSub }]}>
-                  Usado para previsões inteligentes e visão semanal
+                  Usado para previsões inteligentes e limites de gastos
                 </Text>
               </View>
               <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.bg }]}>
@@ -77,7 +101,7 @@ export default function SalaryConfigModal({
             <Text style={[styles.inputLabel, { color: theme.textSub }]}>COMO VOCÊ RECEBE SUA RENDA?</Text>
             <View style={[styles.toggleRow, { backgroundColor: theme.bg }]}>
               <TouchableOpacity 
-                onPress={() => setSalaryType('monthly')}
+                onPress={() => handleToggleSalaryType('monthly')}
                 style={[
                   styles.toggleBtn, 
                   salaryType === 'monthly' && { backgroundColor: theme.indigo }
@@ -92,7 +116,7 @@ export default function SalaryConfigModal({
               </TouchableOpacity>
 
               <TouchableOpacity 
-                onPress={() => setSalaryType('weekly')}
+                onPress={() => handleToggleSalaryType('weekly')}
                 style={[
                   styles.toggleBtn, 
                   salaryType === 'weekly' && { backgroundColor: theme.indigo }
@@ -123,15 +147,20 @@ export default function SalaryConfigModal({
               quickIncrements={false}
             />
 
-            {/* Card Informativo com Conversão Automática */}
+            {/* Card Informativo com Conversão Automática e Meta Diária */}
             {baseSalaryFloat > 0 ? (
               <View style={[styles.conversionBox, { backgroundColor: theme.bg, borderColor: theme.border }]}>
-                <Feather name="info" size={16} color={theme.indigo} />
-                <View style={{ flex: 1 }}>
+                <Feather name="info" size={18} color={theme.indigo} style={{ marginTop: 2 }} />
+                <View style={{ flex: 1, gap: 3 }}>
                   <Text style={[styles.conversionText, { color: theme.textMain }]}>
                     {salaryType === 'monthly' 
-                      ? `Equivale a aprox. ${currencySymbol} ${calculatedWeekly} por semana`
-                      : `Equivale a aprox. ${currencySymbol} ${calculatedMonthly} por mês`}
+                      ? `Equivale a aprox. ${currencySymbol} ${calculatedWeekly} por semana (4 semanas)`
+                      : `Equivale a ${currencySymbol} ${calculatedMonthly} por mês (4 semanas × ${currencySymbol} ${baseSalary})`}
+                  </Text>
+                  <Text style={[styles.conversionSub, { color: theme.textSub }]}>
+                    {salaryType === 'weekly'
+                      ? `Meta diária base: ${currencySymbol} ${dailyReference} / dia (${currencySymbol} ${baseSalary} ÷ 7 dias)`
+                      : `Meta diária base: ${currencySymbol} ${dailyReference} / dia (${currencySymbol} ${baseSalary} ÷ 30 dias)`}
                   </Text>
                 </View>
               </View>
@@ -248,7 +277,11 @@ const styles = StyleSheet.create({
   },
   conversionText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  conversionSub: {
+    fontSize: 11,
+    lineHeight: 15,
   },
   saveBtn: {
     flexDirection: 'row',

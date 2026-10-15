@@ -224,18 +224,18 @@ export default function App() {
     handleUpdateTransactions(seed);
   };
 
-  // Salário semanal estimado configurado pelo usuário
+  // Salário semanal estimado configurado pelo usuário (base 4 semanas/mês)
   const weeklySalaryEstimated = useMemo(() => {
     const base = Number(settings.baseSalary) || 0;
     if (settings.salaryType === 'weekly') {
       return base;
     }
-    return base / 4.33;
+    return base / 4;
   }, [settings]);
 
   // Limite diário de gastos = (salário semanal - parcela semanal da meta de poupança) / 7
   const dailyBudget = useMemo(() => {
-    const weeklyGoal = (Number(settings.savingsGoal) || 0) / 4.33;
+    const weeklyGoal = (Number(settings.savingsGoal) || 0) / 4;
     return Math.max(0, (weeklySalaryEstimated - weeklyGoal) / 7);
   }, [weeklySalaryEstimated, settings]);
 
@@ -551,15 +551,20 @@ export default function App() {
                   </Text>
                 </View>
                 <View style={styles.zenTipCol}>
-                  <Text style={[styles.zenTipLabel, { color: theme.textSub }]}>Orçamento Diário Livre</Text>
+                  <Text style={[styles.zenTipLabel, { color: theme.textSub }]}>Teto Diário Restante</Text>
                   <Text style={[styles.zenTipValue, { color: theme.green }]}>
                     {formatMoney(monthProjection.recommendedDailyBudget)}
                   </Text>
                 </View>
                 <View style={styles.zenTipCol}>
-                  <Text style={[styles.zenTipLabel, { color: theme.textSub }]}>Salário Base</Text>
+                  <Text style={[styles.zenTipLabel, { color: theme.textSub }]}>
+                    {settings.salaryType === 'weekly' ? 'Salário Semanal' : 'Salário Mensal'}
+                  </Text>
                   <Text style={[styles.zenTipValue, { color: theme.indigo }]}>
                     {formatMoney(settings.baseSalary || 0)}
+                    <Text style={{ fontSize: 10, fontWeight: 'normal' }}>
+                      {settings.salaryType === 'weekly' ? ' /sem' : ' /mês'}
+                    </Text>
                   </Text>
                 </View>
               </View>

@@ -113,12 +113,18 @@ export default function ProjectionCard({
           <Text style={[styles.metricValue, { color: theme.textMain }]}>
             {formatMoney(averageDailyExpense)}
           </Text>
+          <Text style={[styles.metricSub, { color: theme.textSub }]}>
+            Em {projection.daysPassed} dias decorridos
+          </Text>
         </View>
 
         <View style={[styles.metricItem, { borderLeftColor: theme.border, borderLeftWidth: 1, paddingLeft: 12 }]}>
-          <Text style={[styles.metricLabel, { color: theme.textSub }]}>Meta Diária Limite</Text>
+          <Text style={[styles.metricLabel, { color: theme.textSub }]}>Teto Diário Restante</Text>
           <Text style={[styles.metricValue, { color: theme.green }]}>
             {formatMoney(recommendedDailyBudget)}
+          </Text>
+          <Text style={[styles.metricSub, { color: theme.textSub }]}>
+            {daysRemaining > 0 ? `Nos ${daysRemaining} dias restantes` : 'Mês encerrado'}
           </Text>
         </View>
       </View>
@@ -259,6 +265,11 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: 15,
     fontWeight: 'bold',
+  },
+  metricSub: {
+    fontSize: 10,
+    marginTop: 2,
+    fontWeight: '500',
   },
   statusBanner: {
     padding: 12,

@@ -173,12 +173,12 @@ export const calculateMonthProjection = (transactions, settings = {}, referenceD
     }
   });
 
-  // Salário ou renda base configurada pelo usuário
+  // Salário ou renda base configurada pelo usuário (considerando 4 semanas por mês para renda semanal)
   const baseMonthlyIncome = Number(settings.baseSalary) || 0;
   const isWeeklySalary = settings.salaryType === 'weekly';
   const effectiveExpectedIncome = isWeeklySalary 
-    ? (baseMonthlyIncome * 4.33) 
-    : Math.max(baseMonthlyIncome, monthIncome);
+    ? (baseMonthlyIncome * 4) 
+    : baseMonthlyIncome;
 
   // Se o usuário tem receita registrada maior que o esperado, usar a real
   const totalProjectedIncome = Math.max(effectiveExpectedIncome, monthIncome);
