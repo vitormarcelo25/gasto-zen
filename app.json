@@ -48,6 +48,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bbc66bd8-5434-41f3-8370-641d9543fe58"
+      }
+    },
+    "owner": "vitormatrix"
   }
 }
