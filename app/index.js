@@ -26,6 +26,7 @@ import CategoryBreakdownCard from '../components/CategoryBreakdownCard';
 import TransactionItem from '../components/TransactionItem';
 import TransactionModal from '../components/TransactionModal';
 import SalaryConfigModal from '../components/SalaryConfigModal';
+import DeleteConfirmModal from '../components/DeleteConfirmModal';
 
 export default function App() {
   // Configurações e Tema
@@ -43,6 +44,8 @@ export default function App() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
   const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState(null);
 
   // Filtros do Extrato
   const [searchQuery, setSearchQuery] = useState('');
@@ -199,9 +202,16 @@ export default function App() {
     setIsTransactionModalOpen(true);
   };
 
-  const handleDeleteTransaction = (id) => {
+  const handleRequestDelete = (tx) => {
+    setTransactionToDelete(tx);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = (id) => {
     const updated = transactions.filter(t => t.id !== id);
     handleUpdateTransactions(updated);
+    setTransactionToDelete(null);
+    setIsDeleteModalOpen(false);
   };
 
   const handleResetDemoData = () => {
@@ -472,7 +482,7 @@ export default function App() {
                 transaction={t}
                 theme={theme}
                 formatMoney={formatMoney}
-                onDelete={handleDeleteTransaction}
+                onDelete={handleRequestDelete}
                 onPress={handleEditTransaction}
               />
             ))}
@@ -651,7 +661,7 @@ export default function App() {
                   transaction={t}
                   theme={theme}
                   formatMoney={formatMoney}
-                  onDelete={handleDeleteTransaction}
+                  onDelete={handleRequestDelete}
                   onPress={handleEditTransaction}
                 />
               ))
@@ -683,6 +693,7 @@ export default function App() {
         }}
         onAddTransaction={handleAddTransaction}
         onUpdateTransaction={handleUpdateSingleTransaction}
+        onDeleteTransaction={handleRequestDelete}
         transactionToEdit={editingTransaction}
         theme={theme}
         currencySymbol={currencySymbol}
@@ -697,6 +708,19 @@ export default function App() {
         onResetData={handleResetDemoData}
         theme={theme}
         currencySymbol={currencySymbol}
+      />
+
+      {/* MODAL DE CONFIRMAÇÃO PROFISSIONAL DE EXCLUSÃO */}
+      <DeleteConfirmModal 
+        visible={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setTransactionToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        transaction={transactionToDelete}
+        theme={theme}
+        formatMoney={formatMoney}
       />
 
       {/* MODAL ESCOLHER MOEDA */}

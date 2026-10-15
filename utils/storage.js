@@ -17,7 +17,7 @@ export const loadTransactions = async (fallbackData = []) => {
     const jsonValue = await AsyncStorage.getItem(TRANSACTIONS_KEY);
     if (jsonValue != null) {
       const parsed = JSON.parse(jsonValue);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }

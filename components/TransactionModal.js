@@ -15,6 +15,7 @@ export default function TransactionModal({
   onClose, 
   onAddTransaction,
   onUpdateTransaction,
+  onDeleteTransaction,
   transactionToEdit = null,
   theme, 
   currencySymbol 
@@ -66,6 +67,12 @@ export default function TransactionModal({
       }
     }
   }, [visible, transactionToEdit]);
+
+  const handleDeleteFromModal = () => {
+    if (!transactionToEdit || !onDeleteTransaction) return;
+    onClose();
+    onDeleteTransaction(transactionToEdit);
+  };
 
   const handleTypeChange = (newType) => {
     setType(newType);
@@ -328,6 +335,20 @@ export default function TransactionModal({
               </Text>
             </TouchableOpacity>
 
+            {/* Botão de Excluir dentro do Modal de Edição */}
+            {isEditing && onDeleteTransaction && (
+              <TouchableOpacity 
+                style={[styles.deleteModalBtn, { backgroundColor: theme.red + '15', borderColor: theme.red + '35' }]} 
+                onPress={handleDeleteFromModal}
+                activeOpacity={0.7}
+              >
+                <Feather name="trash-2" size={16} color={theme.red} style={{ marginRight: 8 }} />
+                <Text style={[styles.deleteModalBtnText, { color: theme.red }]}>
+                  Excluir esta transação
+                </Text>
+              </TouchableOpacity>
+            )}
+
             <View style={{ height: 20 }} />
           </ScrollView>
         </View>
@@ -473,5 +494,18 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  deleteModalBtn: {
+    flexDirection: 'row',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  deleteModalBtnText: {
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 });

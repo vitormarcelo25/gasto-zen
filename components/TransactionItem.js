@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants/categories';
 
@@ -37,28 +37,23 @@ export default function TransactionItem({
     if (e && e.stopPropagation) {
       e.stopPropagation();
     }
-    Alert.alert(
-      'Excluir Transação',
-      `Deseja remover "${transaction.description}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Excluir', style: 'destructive', onPress: () => onDelete(transaction.id) },
-      ]
-    );
+    if (onDelete) {
+      onDelete(transaction);
+    }
   };
 
-  const CardComponent = onPress ? TouchableOpacity : View;
-
   return (
-    <CardComponent 
-      style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
-      onPress={onPress ? () => onPress(transaction) : undefined}
-      activeOpacity={0.7}
-    >
-      <View style={styles.leftRow}>
+    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      {/* Área clicável principal para abrir edição */}
+      <TouchableOpacity 
+        style={styles.clickableContent}
+        onPress={onPress ? () => onPress(transaction) : undefined}
+        activeOpacity={0.7}
+      >
         <View style={[styles.iconBox, { backgroundColor: cat.color + '20' }]}>
           <Feather name={cat.icon} size={18} color={cat.color} />
         </View>
+
         <View style={styles.infoCol}>
           <Text style={[styles.description, { color: theme.textMain }]} numberOfLines={1}>
             {transaction.description}
@@ -83,9 +78,10 @@ export default function TransactionItem({
             )}
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
 
-      <View style={styles.rightRow}>
+      {/* Área lateral com valor e botão de exclusão */}
+      <View style={styles.rightActions}>
         <Text style={[
           styles.amount, 
           { color: isIncome ? theme.green : theme.red }
@@ -94,13 +90,14 @@ export default function TransactionItem({
         </Text>
         <TouchableOpacity 
           onPress={handleDeletePress} 
-          style={styles.deleteBtn}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={[styles.deleteBtn, { backgroundColor: theme.red + '15' }]}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.6}
         >
-          <Feather name="trash-2" size={14} color={theme.textSub} />
+          <Feather name="trash-2" size={15} color={theme.red} />
         </TouchableOpacity>
       </View>
-    </CardComponent>
+    </View>
   );
 }
 
@@ -109,16 +106,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     borderRadius: 18,
     borderWidth: 1,
     marginBottom: 10,
   },
-  leftRow: {
+  clickableContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     flex: 1,
+    paddingVertical: 4,
   },
   iconBox: {
     width: 40,
@@ -160,17 +159,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
-  rightRow: {
+  rightActions: {
     alignItems: 'flex-end',
-    gap: 6,
-    marginLeft: 10,
+    justifyContent: 'center',
+    gap: 8,
+    marginLeft: 12,
   },
   amount: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
   },
   deleteBtn: {
-    padding: 2,
-    opacity: 0.7,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
