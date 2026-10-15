@@ -71,18 +71,27 @@ export const calculateWeeklyStats = (transactions, referenceDate = new Date()) =
   let weeklyExpense = 0;
   let weeklyIncome = 0;
 
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
   // Mapa diário
   const dailyData = weekDays.map(day => {
     let dayExpense = 0;
     let dayIncome = 0;
+    let count = 0;
+    const catMap = {};
 
     weekTransactions.forEach(t => {
       const tDate = new Date(t.date);
       if (tDate.toDateString() === day.date.toDateString()) {
+        count += 1;
+        const amt = Number(t.amount) || 0;
         if (t.type === 'expense') {
-          dayExpense += Number(t.amount) || 0;
+          dayExpense += amt;
+          const cat = t.category || 'Outros';
+          catMap[cat] = (catMap[cat] || 0) + amt;
         } else {
-          dayIncome += Number(t.amount) || 0;
+          dayIncome += amt;
         }
       }
     });
@@ -90,12 +99,27 @@ export const calculateWeeklyStats = (transactions, referenceDate = new Date()) =
     weeklyExpense += dayExpense;
     weeklyIncome += dayIncome;
 
+    const topCategory = Object.keys(catMap).sort((a, b) => catMap[b] - catMap[a])[0] || null;
+
     return {
       ...day,
       expense: dayExpense,
       income: dayIncome,
+      count,
+      topCategory,
+      topCategoryAmount: topCategory ? catMap[topCategory] : 0,
+      isFuture: day.date.getTime() > todayStart.getTime(),
     };
   });
+
+  // Semana anterior (para comparação)
+  const prevRef = new Date(referenceDate);
+  prevRef.setDate(prevRef.getDate() - 7);
+  const previousWeekExpense = transactions
+    .filter(t => t.type === 'expense' && isSameWeek(t.date, prevRef))
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  const daysElapsed = Math.max(dailyData.filter(d => !d.isFuture).length, 1);
 
   // Identificar dia com maior gasto
   const highestExpenseDay = [...dailyData].sort((a, b) => b.expense - a.expense)[0];
@@ -109,6 +133,9 @@ export const calculateWeeklyStats = (transactions, referenceDate = new Date()) =
     highestExpenseDay: highestExpenseDay && highestExpenseDay.expense > 0 ? highestExpenseDay : null,
     maxDailyValue: maxDayExpense,
     transactionCount: weekTransactions.length,
+    previousWeekExpense,
+    daysElapsed,
+    averageDailyExpense: weeklyExpense / daysElapsed,
   };
 };
 

@@ -218,6 +218,12 @@ export default function App() {
     return base / 4.33;
   }, [settings]);
 
+  // Limite diário de gastos = (salário semanal - parcela semanal da meta de poupança) / 7
+  const dailyBudget = useMemo(() => {
+    const weeklyGoal = (Number(settings.savingsGoal) || 0) / 4.33;
+    return Math.max(0, (weeklySalaryEstimated - weeklyGoal) / 7);
+  }, [weeklySalaryEstimated, settings]);
+
   if (!isLoaded) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.bg }]}>
@@ -437,7 +443,7 @@ export default function App() {
             </View>
 
             {/* GRÁFICO DE BARRAS DA SEMANA */}
-            <WeeklyBarChart 
+            <WeeklyBarChart dailyBudget={dailyBudget} 
               weeklyStats={weeklyStats} 
               theme={theme} 
               formatMoney={formatMoney} 
@@ -488,7 +494,7 @@ export default function App() {
             />
 
             {/* GRÁFICO SEMANAL DETALHADO */}
-            <WeeklyBarChart 
+            <WeeklyBarChart dailyBudget={dailyBudget} 
               weeklyStats={weeklyStats} 
               theme={theme} 
               formatMoney={formatMoney} 
