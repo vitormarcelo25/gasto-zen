@@ -10,6 +10,11 @@ import {
 } from '../utils/calculations';
 import { formatMoney as formatMoneyForCurrency, getCurrencySymbol } from '../utils/format';
 import { generateRecurringTransactions } from '../utils/recurrence';
+import { 
+  DEFAULT_CARD_SETTINGS, 
+  calculateCardSummary, 
+  generateInstallmentTransactions 
+} from '../utils/cardCalculations';
 import { loadSettings, loadTransactions, saveSettings, saveTransactions } from '../utils/storage';
 
 const AppContext = createContext(null);
@@ -52,6 +57,7 @@ export function AppProvider({ children }) {
   // Modais
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
@@ -110,13 +116,27 @@ export function AppProvider({ children }) {
     [settings, updateSettings]
   );
 
-  // Ações de transação (recorrência expandida na criação)
+  // Configurações do Cartão de Crédito
+  const cardSettings = useMemo(() => {
+    return settings.card || DEFAULT_CARD_SETTINGS;
+  }, [settings]);
+
+  const updateCardSettings = useCallback((newCardSettings) => {
+    updateSettings({ ...settings, card: newCardSettings });
+  }, [settings, updateSettings]);
+
+  // Ações de transação (recorrência expandida e parcelamento de cartão na criação)
   const handleAddTransaction = useCallback(
     (newTx) => {
-      const occurrences = generateRecurringTransactions(newTx);
+      let occurrences = [];
+      if (newTx.paymentMethod === 'credit' && Number(newTx.installmentsCount) > 1) {
+        occurrences = generateInstallmentTransactions(newTx, cardSettings);
+      } else {
+        occurrences = generateRecurringTransactions(newTx);
+      }
       updateTransactions([...occurrences, ...transactions]);
     },
-    [transactions, updateTransactions]
+    [transactions, updateTransactions, cardSettings]
   );
 
   const handleUpdateSingleTransaction = useCallback(
@@ -157,6 +177,8 @@ export function AppProvider({ children }) {
 
   const openSalaryModal = useCallback(() => setIsSalaryModalOpen(true), []);
   const closeSalaryModal = useCallback(() => setIsSalaryModalOpen(false), []);
+  const openCardModal = useCallback(() => setIsCardModalOpen(true), []);
+  const closeCardModal = useCallback(() => setIsCardModalOpen(false), []);
   const openCurrencyModal = useCallback(() => setIsCurrencyModalOpen(true), []);
   const closeCurrencyModal = useCallback(() => setIsCurrencyModalOpen(false), []);
 
@@ -287,6 +309,14 @@ export function AppProvider({ children }) {
     weeklySalaryEstimated,
     dailyBudget,
     formatMoney,
+
+    // Cartões & Faturas
+    cardSettings,
+    updateCardSettings,
+    cardSummary,
+    isCardModalOpen,
+    openCardModal,
+    closeCardModal,
 
     // Filtros do extrato
     filters: {

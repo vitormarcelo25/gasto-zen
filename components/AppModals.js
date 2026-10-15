@@ -7,6 +7,7 @@ import { CURRENCIES } from '../constants/categories';
 import TransactionModal from './TransactionModal';
 import SalaryConfigModal from './SalaryConfigModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
+import CardConfigModal from './CardConfigModal';
 
 export default function AppModals() {
   const {
@@ -24,6 +25,10 @@ export default function AppModals() {
     requestDelete,
     isSalaryModalOpen,
     closeSalaryModal,
+    isCardModalOpen,
+    closeCardModal,
+    cardSettings,
+    updateCardSettings,
     isCurrencyModalOpen,
     closeCurrencyModal,
     selectCurrency,
@@ -44,6 +49,17 @@ export default function AppModals() {
         onUpdateTransaction={updateTransaction}
         onDeleteTransaction={requestDelete}
         transactionToEdit={editingTransaction}
+        theme={theme}
+        currencySymbol={currencySymbol}
+        cardSettings={cardSettings}
+      />
+
+      <CardConfigModal
+        key={isCardModalOpen ? 'card-open' : 'card-closed'}
+        visible={isCardModalOpen}
+        onClose={closeCardModal}
+        cardSettings={cardSettings}
+        onSaveCardSettings={updateCardSettings}
         theme={theme}
         currencySymbol={currencySymbol}
       />

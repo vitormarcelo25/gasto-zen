@@ -34,7 +34,8 @@ export default function TransactionModal({
   onDeleteTransaction,
   transactionToEdit = null,
   theme, 
-  currencySymbol 
+  currencySymbol,
+  cardSettings = null 
 }) {
   // O modal é remontado a cada abertura (key em AppModals),
   // então o estado inicial deriva direto das props.
@@ -48,6 +49,13 @@ export default function TransactionModal({
     if (transactionToEdit?.categoryId) return transactionToEdit.categoryId;
     return (transactionToEdit?.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES)[0].id;
   });
+  const [paymentMethod, setPaymentMethod] = useState(transactionToEdit?.paymentMethod || 'cash'); // 'cash' | 'debit' | 'credit'
+  const [creditMode, setCreditMode] = useState(() => {
+    if (transactionToEdit?.isSubscription) return 'subscription';
+    if (transactionToEdit?.installmentsCount && transactionToEdit.installmentsCount > 1) return 'installment';
+    return 'single';
+  }); // 'single' | 'installment' | 'subscription'
+  const [installmentsCount, setInstallmentsCount] = useState(transactionToEdit?.installmentsCount || 3);
   const [dateChoice, setDateChoice] = useState(() => resolveDateChoice(transactionToEdit));
   const [recurrence, setRecurrence] = useState(transactionToEdit?.recurrence || 'single'); // 'single' | 'weekly' | 'monthly'
 
@@ -103,6 +111,10 @@ export default function TransactionModal({
 
     const categoryItem = categories.find(c => c.id === category) || categories[0];
 
+    const isCredit = type === 'expense' && paymentMethod === 'credit';
+    const isInstallment = isCredit && creditMode === 'installment';
+    const isSubscription = isCredit && creditMode === 'subscription';
+
     const txPayload = {
       id: transactionToEdit ? transactionToEdit.id : Math.random().toString(36).substr(2, 9),
       type,
@@ -111,7 +123,10 @@ export default function TransactionModal({
       category: categoryItem.label,
       categoryId: categoryItem.id,
       date: tDate.toISOString(),
-      recurrence,
+      recurrence: isSubscription ? 'monthly' : recurrence,
+      paymentMethod: type === 'expense' ? paymentMethod : 'cash',
+      installmentsCount: isInstallment ? installmentsCount : 1,
+      isSubscription: isSubscription,
     };
 
     if (transactionToEdit && onUpdateTransaction) {
@@ -263,6 +278,121 @@ export default function TransactionModal({
                 );
               })}
             </View>
+
+            {/* Forma de Pagamento (somente para despesas) */}
+            {type === 'expense' && (
+              <>
+                <Text style={[styles.inputLabel, { color: theme.textSub }]}>FORMA DE PAGAMENTO</Text>
+                <View style={[styles.smallToggle, { backgroundColor: theme.bg, marginBottom: 8 }]}>
+                  <TouchableOpacity
+                    onPress={() => setPaymentMethod('cash')}
+                    style={[styles.smallToggleBtn, paymentMethod === 'cash' && { backgroundColor: theme.card }]}
+                  >
+                    <Text style={[styles.smallToggleText, { color: paymentMethod === 'cash' ? theme.textMain : theme.textSub }]}>
+                      💵 Pix / Dinheiro
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setPaymentMethod('debit')}
+                    style={[styles.smallToggleBtn, paymentMethod === 'debit' && { backgroundColor: theme.card }]}
+                  >
+                    <Text style={[styles.smallToggleText, { color: paymentMethod === 'debit' ? theme.textMain : theme.textSub }]}>
+                      💳 Débito
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setPaymentMethod('credit')}
+                    style={[styles.smallToggleBtn, paymentMethod === 'credit' && { backgroundColor: theme.indigo }]}
+                  >
+                    <Text style={[styles.smallToggleText, { color: paymentMethod === 'credit' ? '#FFF' : theme.textSub }]}>
+                      💳 Crédito
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Opções de Cartão de Crédito */}
+                {paymentMethod === 'credit' && (
+                  <View style={[styles.creditOptionsCard, { backgroundColor: theme.bg, borderColor: theme.border }]}>
+                    <Text style={[styles.subSectionTitle, { color: theme.textMain }]}>
+                      Condição no Cartão ({cardSettings?.name || 'Meu Cartão'})
+                    </Text>
+                    <View style={[styles.smallToggle, { backgroundColor: theme.card, marginTop: 6 }]}>
+                      <TouchableOpacity
+                        onPress={() => setCreditMode('single')}
+                        style={[styles.smallToggleBtn, creditMode === 'single' && { backgroundColor: theme.indigo }]}
+                      >
+                        <Text style={[styles.smallToggleText, { color: creditMode === 'single' ? '#FFF' : theme.textSub }]}>
+                          À vista (1x)
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => setCreditMode('installment')}
+                        style={[styles.smallToggleBtn, creditMode === 'installment' && { backgroundColor: theme.indigo }]}
+                      >
+                        <Text style={[styles.smallToggleText, { color: creditMode === 'installment' ? '#FFF' : theme.textSub }]}>
+                          Parcelado
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => setCreditMode('subscription')}
+                        style={[styles.smallToggleBtn, creditMode === 'subscription' && { backgroundColor: theme.indigo }]}
+                      >
+                        <Text style={[styles.smallToggleText, { color: creditMode === 'subscription' ? '#FFF' : theme.textSub }]}>
+                          Assinatura
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Seletor de Parcelas */}
+                    {creditMode === 'installment' && (
+                      <View style={{ marginTop: 10 }}>
+                        <Text style={[styles.installmentLabel, { color: theme.textSub }]}>NÚMERO DE PARCELAS</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 6 }}>
+                          {[2, 3, 4, 5, 6, 8, 10, 12, 18, 24].map((num) => (
+                            <TouchableOpacity
+                              key={num}
+                              onPress={() => setInstallmentsCount(num)}
+                              style={[
+                                styles.installmentChip,
+                                {
+                                  backgroundColor: installmentsCount === num ? theme.indigo : theme.card,
+                                  borderColor: installmentsCount === num ? theme.indigo : theme.border,
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.installmentChipText,
+                                  { color: installmentsCount === num ? '#FFF' : theme.textMain },
+                                ]}
+                              >
+                                {num}x
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+
+                        {/* Preview da Parcela */}
+                        {amountFloat > 0 && (
+                          <View style={[styles.installmentPreview, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                            <Feather name="info" size={14} color={theme.indigo} />
+                            <Text style={[styles.installmentPreviewText, { color: theme.textMain }]}>
+                              {installmentsCount}x de {currencySymbol} {(amountFloat / installmentsCount).toFixed(2).replace('.', ',')} por mês
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+
+                    {creditMode === 'subscription' && (
+                      <Text style={[styles.creditHintText, { color: theme.textSub }]}>
+                        💡 Cobrança fixa mensal na fatura do cartão (ex: Netflix, Spotify, academia).
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </>
+            )}
 
             {/* Opções de Data */}
             <Text style={[styles.inputLabel, { color: theme.textSub }]}>QUANDO?</Text>
@@ -501,6 +631,50 @@ const styles = StyleSheet.create({
   smallToggleText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  creditOptionsCard: {
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  subSectionTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  installmentLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  installmentChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginRight: 6,
+  },
+  installmentChipText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  installmentPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 6,
+  },
+  installmentPreviewText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  creditHintText: {
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 8,
   },
   submitBtn: {
     flexDirection: 'row',

@@ -6,6 +6,7 @@ import { useApp } from '../context/AppContext';
 
 const TAB_META = {
   index: { label: 'Início', icon: 'home' },
+  cartoes: { label: 'Cartões', icon: 'credit-card' },
   estatisticas: { label: 'Estatísticas', icon: 'pie-chart' },
   extrato: { label: 'Extrato', icon: 'list' },
 };

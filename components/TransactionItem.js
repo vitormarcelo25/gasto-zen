@@ -66,7 +66,21 @@ export default function TransactionItem({
             <Text style={[styles.dateText, { color: theme.textSub }]}>
               {formatDateLabel(transaction.date)}
             </Text>
-            {transaction.recurrence && transaction.recurrence !== 'single' && (
+            {transaction.paymentMethod === 'credit' && (
+              <>
+                <Text style={[styles.bullet, { color: theme.textSub }]}>•</Text>
+                <View style={[styles.recurrenceTag, { backgroundColor: theme.indigo + '20' }]}>
+                  <Text style={[styles.recurrenceText, { color: theme.indigo }]}>
+                    {transaction.isSubscription
+                      ? '💳 Assinatura'
+                      : (transaction.installmentsCount > 1
+                        ? `💳 ${transaction.installmentIndex}/${transaction.installmentsCount}`
+                        : '💳 Crédito')}
+                  </Text>
+                </View>
+              </>
+            )}
+            {transaction.recurrence && transaction.recurrence !== 'single' && !transaction.isSubscription && (
               <>
                 <Text style={[styles.bullet, { color: theme.textSub }]}>•</Text>
                 <View style={[styles.recurrenceTag, { backgroundColor: theme.indigo + '20' }]}>
