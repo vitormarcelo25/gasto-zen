@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, StatusBar } from 'react-native';
 import { Slot } from 'expo-router';
+import * as Updates from 'expo-updates';
 
 import { AppProvider, useApp } from '../context/AppContext';
 import AppHeader from '../components/AppHeader';
@@ -8,6 +9,22 @@ import AppModals from '../components/AppModals';
 
 function AppShell() {
   const { theme, isDarkMode, isLoaded } = useApp();
+
+  React.useEffect(() => {
+    async function checkAppUpdates() {
+      if (__DEV__) return;
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        }
+      } catch (err) {
+        // Silencioso em caso de offline
+      }
+    }
+    checkAppUpdates();
+  }, []);
 
   if (!isLoaded) {
     return (
