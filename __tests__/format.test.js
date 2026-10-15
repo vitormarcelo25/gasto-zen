@@ -28,13 +28,12 @@ describe('formatMoney', () => {
   it('formata JPY sem casas decimais (moeda sem centavos)', () => {
     const formatted = formatMoney(1235, 'JPY');
     expect(formatted).toMatch(/1,235/);
-    expect(formatted).not.toMatch(/,/);
+    expect(formatted).not.toMatch(/[.,]\d{1,2}$/);
     expect(formatted).toMatch(/[/¥\uFFE5]/);
   });
 
   it('usa fallback manual quando Intl está indisponível', () => {
     const originalIntl = global.Intl;
-    // eslint-disable-next-line no-global-assign
     global.Intl = undefined;
     try {
       expect(formatMoney(1234.5, 'BRL')).toBe('R$ 1.234,50');

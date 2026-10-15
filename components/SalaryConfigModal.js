@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView 
 } from 'react-native';
@@ -16,23 +16,19 @@ export default function SalaryConfigModal({
   currencySymbol,
   formatMoney,
 }) {
-  const [salaryType, setSalaryType] = useState('monthly'); // 'monthly' | 'weekly'
-  const [baseSalary, setBaseSalary] = useState('');
-  const [baseSalaryFloat, setBaseSalaryFloat] = useState(0);
-  const [savingsGoal, setSavingsGoal] = useState('');
-  const [savingsGoalFloat, setSavingsGoalFloat] = useState(0);
-
-  useEffect(() => {
-    if (visible && settings) {
-      setSalaryType(settings.salaryType || 'monthly');
-      const sFloat = Number(settings.baseSalary) || 0;
-      const gFloat = Number(settings.savingsGoal) || 0;
-      setBaseSalary(sFloat > 0 ? floatToMasked(sFloat) : '');
-      setBaseSalaryFloat(sFloat);
-      setSavingsGoal(gFloat > 0 ? floatToMasked(gFloat) : '');
-      setSavingsGoalFloat(gFloat);
-    }
-  }, [visible, settings]);
+  // O modal é remontado a cada abertura (key em AppModals),
+  // então o estado inicial deriva direto das props.
+  const [salaryType, setSalaryType] = useState(settings?.salaryType || 'monthly'); // 'monthly' | 'weekly'
+  const [baseSalary, setBaseSalary] = useState(() => {
+    const sFloat = Number(settings?.baseSalary) || 0;
+    return sFloat > 0 ? floatToMasked(sFloat) : '';
+  });
+  const [baseSalaryFloat, setBaseSalaryFloat] = useState(() => Number(settings?.baseSalary) || 0);
+  const [savingsGoal, setSavingsGoal] = useState(() => {
+    const gFloat = Number(settings?.savingsGoal) || 0;
+    return gFloat > 0 ? floatToMasked(gFloat) : '';
+  });
+  const [savingsGoalFloat, setSavingsGoalFloat] = useState(() => Number(settings?.savingsGoal) || 0);
 
   const handleToggleSalaryType = (newType) => {
     if (newType === salaryType) return;

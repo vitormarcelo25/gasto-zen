@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
@@ -51,7 +51,7 @@ export default function WeeklyBarChart({ weeklyStats, theme, formatMoney, dailyB
   const selected = dailyData[selectedIdx] || dailyData[0];
 
   // Animação de crescimento das barras
-  const grow = useRef(new Animated.Value(0)).current;
+  const [grow] = useState(() => new Animated.Value(0));
   useEffect(() => {
     grow.setValue(0);
     Animated.timing(grow, {

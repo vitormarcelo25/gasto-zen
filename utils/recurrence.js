@@ -43,7 +43,8 @@ export const generateRecurringTransactions = (
   const baseDate = new Date(transaction.date);
   if (Number.isNaN(baseDate.getTime())) return [transaction];
 
-  const occurrences = [{ ...transaction, seriesId: transaction.id }];
+  const base = { ...transaction, seriesId: transaction.id };
+  const occurrences = [base];
 
   if (recurrence === 'weekly') {
     const limit = addMonthsClamped(baseDate, horizonMonths);
@@ -52,13 +53,13 @@ export const generateRecurringTransactions = (
       const next = new Date(baseDate);
       next.setDate(next.getDate() + step * 7);
       if (next.getTime() > limit.getTime()) break;
-      occurrences.push({ ...transaction, id: generateId(), date: next.toISOString() });
+      occurrences.push({ ...base, id: generateId(), date: next.toISOString() });
       step += 1;
     }
   } else if (recurrence === 'monthly') {
     for (let i = 1; i <= horizonMonths; i++) {
       const next = addMonthsClamped(baseDate, i);
-      occurrences.push({ ...transaction, id: generateId(), date: next.toISOString() });
+      occurrences.push({ ...base, id: generateId(), date: next.toISOString() });
     }
   }
 

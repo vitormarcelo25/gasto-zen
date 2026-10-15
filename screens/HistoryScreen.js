@@ -31,7 +31,7 @@ export default function HistoryScreen() {
 
   return (
     <ScrollView
-      style={styles.contentScroll}
+      style={[styles.contentScroll, { backgroundColor: theme.bg }]}
       contentContainerStyle={styles.scrollInner}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"

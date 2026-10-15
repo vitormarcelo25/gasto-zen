@@ -26,6 +26,9 @@ Um aplicativo de gestão financeira pessoal leve, intuitivo e moderno desenvolvi
 - **⚙️ Configuração de Salário & Metas**:
   - Suporte a salário mensal ou semanal com conversão instantânea.
   - Definição de meta de poupança mensal.
+- **🔁 Transações Recorrentes**:
+  - Criação automática de ocorrências semanais ou mensais para os próximos 6 meses.
+  - Cada ocorrência pode ser editada ou excluída individualmente.
 - **🌗 Tema Dinâmico Zen & Multi-Moedas**:
   - Alternância suave entre Modo Escuro (*Dark Zen*) e Modo Claro.
   - Suporte a BRL (R$), USD ($), EUR (€), GBP (£) e JPY (¥).
@@ -37,7 +40,7 @@ Um aplicativo de gestão financeira pessoal leve, intuitivo e moderno desenvolvi
 ## 🚀 Tecnologias Utilizadas
 
 - [React Native](https://reactnative.dev/)
-- [Expo](https://expo.dev/) (SDK 54)
+- [Expo](https://expo.dev/) (SDK 57)
 - [Expo Router](https://docs.expo.dev/router/introduction/)
 - [@react-native-async-storage/async-storage](https://react-native-async-storage.github.io/async-storage/)
 - [@expo/vector-icons](https://icons.expo.fyi/) (Feather Icons)
@@ -65,6 +68,11 @@ Um aplicativo de gestão financeira pessoal leve, intuitivo e moderno desenvolvi
 4. **Para testar no navegador (Web):**
    ```bash
    npx expo start --web
+   ```
+
+5. **Para rodar os testes unitários:**
+   ```bash
+   npm test
    ```
 
 ---

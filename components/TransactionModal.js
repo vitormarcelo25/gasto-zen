@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Alert, ScrollView 
 } from 'react-native';
@@ -11,6 +11,21 @@ import { RECURRENCE_HORIZON_MONTHS } from '../utils/recurrence';
 const QUICK_EXPENSES = ['Supermercado', 'Almoço', 'Uber', 'Farmácia', 'Combustível', 'Internet', 'Lazer'];
 const QUICK_INCOMES = ['Salário', 'Freelance', 'Pix Recebido', 'Bônus', 'Venda'];
 
+// 'today' | 'yesterday' | 'original' — preserva datas antigas na edição
+const resolveDateChoice = (tx) => {
+  if (!tx || !tx.date) return 'today';
+  const tDate = new Date(tx.date);
+  if (Number.isNaN(tDate.getTime())) return 'today';
+
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  if (tDate.toDateString() === today.toDateString()) return 'today';
+  if (tDate.toDateString() === yesterday.toDateString()) return 'yesterday';
+  return 'original';
+};
+
 export default function TransactionModal({ 
   visible, 
   onClose, 
@@ -21,55 +36,22 @@ export default function TransactionModal({
   theme, 
   currencySymbol 
 }) {
-  const [type, setType] = useState('expense'); // 'expense' | 'income'
-  const [amount, setAmount] = useState('');
-  const [amountFloat, setAmountFloat] = useState(0);
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0].id);
-  const [dateChoice, setDateChoice] = useState('today'); // 'today' | 'yesterday' | 'original'
-  const [recurrence, setRecurrence] = useState('single'); // 'single' | 'weekly' | 'monthly'
+  // O modal é remontado a cada abertura (key em AppModals),
+  // então o estado inicial deriva direto das props.
+  const [type, setType] = useState(transactionToEdit?.type || 'expense'); // 'expense' | 'income'
+  const [amount, setAmount] = useState(() =>
+    transactionToEdit ? floatToMasked(transactionToEdit.amount) : ''
+  );
+  const [amountFloat, setAmountFloat] = useState(() => Number(transactionToEdit?.amount) || 0);
+  const [description, setDescription] = useState(transactionToEdit?.description || '');
+  const [category, setCategory] = useState(() => {
+    if (transactionToEdit?.categoryId) return transactionToEdit.categoryId;
+    return (transactionToEdit?.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES)[0].id;
+  });
+  const [dateChoice, setDateChoice] = useState(() => resolveDateChoice(transactionToEdit));
+  const [recurrence, setRecurrence] = useState(transactionToEdit?.recurrence || 'single'); // 'single' | 'weekly' | 'monthly'
 
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
-
-  useEffect(() => {
-    if (visible) {
-      if (transactionToEdit) {
-        setType(transactionToEdit.type || 'expense');
-        const masked = floatToMasked(transactionToEdit.amount);
-        setAmount(masked);
-        setAmountFloat(Number(transactionToEdit.amount) || 0);
-        setDescription(transactionToEdit.description || '');
-        setCategory(transactionToEdit.categoryId || (transactionToEdit.type === 'expense' ? EXPENSE_CATEGORIES[0].id : INCOME_CATEGORIES[0].id));
-        setRecurrence(transactionToEdit.recurrence || 'single');
-
-        // Determinar se data é hoje, ontem ou outra data preservada
-        if (transactionToEdit.date) {
-          const tDate = new Date(transactionToEdit.date);
-          const today = new Date();
-          const yesterday = new Date();
-          yesterday.setDate(today.getDate() - 1);
-          if (tDate.toDateString() === today.toDateString()) {
-            setDateChoice('today');
-          } else if (tDate.toDateString() === yesterday.toDateString()) {
-            setDateChoice('yesterday');
-          } else {
-            setDateChoice('original');
-          }
-        } else {
-          setDateChoice('today');
-        }
-      } else {
-        // Novo lançamento
-        setType('expense');
-        setAmount('');
-        setAmountFloat(0);
-        setDescription('');
-        setCategory(EXPENSE_CATEGORIES[0].id);
-        setDateChoice('today');
-        setRecurrence('single');
-      }
-    }
-  }, [visible, transactionToEdit]);
 
   const handleDeleteFromModal = () => {
     if (!transactionToEdit || !onDeleteTransaction) return;

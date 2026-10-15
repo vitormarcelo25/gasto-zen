@@ -20,9 +20,11 @@ const getFallbackDecimals = (code) => (code in CURRENCY_DECIMALS ? CURRENCY_DECI
 const manualFormat = (num, symbol, decimals, isBRL) => {
   const fixed = Math.abs(num).toFixed(decimals);
   const [intPart, decPart] = fixed.split('.');
-  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const groupSep = isBRL ? '.' : ',';
+  const decSep = isBRL ? ',' : '.';
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, groupSep);
   const signal = num < 0 ? '-' : '';
-  const body = decPart ? `${grouped}.${decPart}` : grouped;
+  const body = decPart ? `${grouped}${decSep}${decPart}` : grouped;
   if (isBRL) return `${signal}${symbol} ${body}`;
   return `${signal}${symbol}${body}`;
 };

@@ -1,10 +1,13 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 
+import { useApp } from '../../context/AppContext';
 import ZenTabBar from '../../components/ZenTabBar';
 import FabButton from '../../components/FabButton';
 
 export default function TabsLayout() {
+  const { theme } = useApp();
+
   return (
     <>
       <Tabs
@@ -12,6 +15,7 @@ export default function TabsLayout() {
         screenOptions={{
           headerShown: false,
           tabBarPosition: 'top',
+          sceneStyle: { backgroundColor: theme.bg },
         }}
       >
         <Tabs.Screen name="index" options={{ title: 'Início' }} />

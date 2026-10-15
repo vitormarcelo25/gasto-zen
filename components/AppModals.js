@@ -23,7 +23,6 @@ export default function AppModals() {
     updateTransaction,
     requestDelete,
     isSalaryModalOpen,
-    openSalaryModal,
     closeSalaryModal,
     isCurrencyModalOpen,
     closeCurrencyModal,
@@ -38,6 +37,7 @@ export default function AppModals() {
   return (
     <>
       <TransactionModal
+        key={isTransactionModalOpen ? (editingTransaction ? editingTransaction.id : 'new') : 'closed'}
         visible={isTransactionModalOpen}
         onClose={closeTransactionModal}
         onAddTransaction={addTransaction}
@@ -49,6 +49,7 @@ export default function AppModals() {
       />
 
       <SalaryConfigModal
+        key={isSalaryModalOpen ? 'salary-open' : 'salary-closed'}
         visible={isSalaryModalOpen}
         onClose={closeSalaryModal}
         settings={settings}
