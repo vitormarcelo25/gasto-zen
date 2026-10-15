@@ -257,6 +257,11 @@ export function AppProvider({ children }) {
     [sortedTransactions]
   );
 
+  const cardSummary = useMemo(
+    () => calculateCardSummary(sortedTransactions, cardSettings),
+    [sortedTransactions, cardSettings]
+  );
+
   const filteredTransactions = useMemo(() => {
     const now = new Date();
     return sortedTransactions.filter((t) => {
