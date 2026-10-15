@@ -72,15 +72,20 @@ export default function App() {
   // Carregar dados salvos ao iniciar
   useEffect(() => {
     async function initData() {
-      const initialSeed = getInitialTransactions();
-      const loadedTxs = await loadTransactions(initialSeed);
-      const loadedSett = await loadSettings(DEFAULT_SETTINGS);
+      try {
+        const initialSeed = getInitialTransactions();
+        const loadedTxs = await loadTransactions(initialSeed);
+        const loadedSett = await loadSettings(DEFAULT_SETTINGS);
 
-      setTransactions(loadedTxs);
-      setSettings(loadedSett);
-      setIsDarkMode(loadedSett.isDarkMode ?? true);
-      setCurrency(loadedSett.currency || 'BRL');
-      setIsLoaded(true);
+        setTransactions(loadedTxs);
+        setSettings(loadedSett);
+        setIsDarkMode(loadedSett.isDarkMode ?? true);
+        setCurrency(loadedSett.currency || 'BRL');
+      } catch (e) {
+        console.error('Erro ao inicializar dados:', e);
+      } finally {
+        setIsLoaded(true);
+      }
     }
     initData();
   }, []);
