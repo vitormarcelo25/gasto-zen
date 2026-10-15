@@ -8,7 +8,8 @@ export default function TransactionItem({
   theme, 
   formatMoney, 
   onDelete,
-  onPress 
+  onPress,
+  card = null 
 }) {
   const isIncome = transaction.type === 'income';
 
@@ -69,13 +70,14 @@ export default function TransactionItem({
             {transaction.paymentMethod === 'credit' && (
               <>
                 <Text style={[styles.bullet, { color: theme.textSub }]}>•</Text>
-                <View style={[styles.recurrenceTag, { backgroundColor: theme.indigo + '20' }]}>
-                  <Text style={[styles.recurrenceText, { color: theme.indigo }]}>
+                <View style={[styles.recurrenceTag, { backgroundColor: (card?.color || theme.indigo) + '20' }]}>
+                  <Text style={[styles.recurrenceText, { color: card?.color || theme.indigo }]}>
+                    {card?.name ? `${card.name} • ` : '💳 '}
                     {transaction.isSubscription
-                      ? '💳 Assinatura'
+                      ? 'Assinatura'
                       : (transaction.installmentsCount > 1
-                        ? `💳 ${transaction.installmentIndex}/${transaction.installmentsCount}`
-                        : '💳 Crédito')}
+                        ? `${transaction.installmentIndex}/${transaction.installmentsCount}`
+                        : 'Crédito')}
                   </Text>
                 </View>
               </>

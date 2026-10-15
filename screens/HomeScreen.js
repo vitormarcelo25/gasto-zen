@@ -18,8 +18,10 @@ export default function HomeScreen() {
     dailyBudget,
     weeklySalaryEstimated,
     transactions,
-    cardSettings,
+    cards,
+    selectedCard,
     cardSummary,
+    getCardForTransaction,
     openSalaryModal,
     openEditTransaction,
     requestDelete,
@@ -158,17 +160,18 @@ export default function HomeScreen() {
         activeOpacity={0.8}
       >
         <View style={styles.cardQuickLeft}>
-          <View style={[styles.cardQuickIconBox, { backgroundColor: (cardSettings?.color || '#6366F1') + '20' }]}>
-            <Feather name="credit-card" size={16} color={cardSettings?.color || '#6366F1'} />
+          <View style={[styles.cardQuickIconBox, { backgroundColor: (selectedCard?.color || '#6366F1') + '20' }]}>
+            <Feather name="credit-card" size={16} color={selectedCard?.color || '#6366F1'} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.cardQuickTitle, { color: theme.textMain }]}>
-              {cardSettings?.name || 'Meu Cartão'} • Fatura: {formatMoney(cardSummary?.currentInvoiceAmount || 0)}
+              {cards.length > 1 ? `${cards.length} cartões` : (selectedCard?.name || 'Meu Cartão')}
+              {' • Fatura: '}{formatMoney(cardSummary?.currentInvoiceAmount || 0)}
             </Text>
             <Text style={[styles.cardQuickSub, { color: theme.textSub }]}>
               {cardSummary?.futureDebtRemaining > 0
                 ? `Dívida restante a pagar: ${formatMoney(cardSummary.futureDebtRemaining)}`
-                : `Fecha dia ${cardSettings?.closingDay || 10} • Vence dia ${cardSettings?.dueDay || 17}`}
+                : `Fecha dia ${selectedCard?.closingDay || 10} • Vence dia ${selectedCard?.dueDay || 17}`}
             </Text>
           </View>
         </View>
@@ -193,6 +196,7 @@ export default function HomeScreen() {
           formatMoney={formatMoney}
           onDelete={requestDelete}
           onPress={openEditTransaction}
+          card={getCardForTransaction(t)}
         />
       ))}
 

@@ -25,6 +25,7 @@ export default function HistoryScreen() {
     filters,
     openEditTransaction,
     requestDelete,
+    getCardForTransaction,
   } = useApp();
 
   const { searchQuery, setSearchQuery, period, setPeriod, type, setType } = filters;
@@ -134,6 +135,7 @@ export default function HistoryScreen() {
             formatMoney={formatMoney}
             onDelete={requestDelete}
             onPress={openEditTransaction}
+            card={getCardForTransaction(t)}
           />
         ))
       )}

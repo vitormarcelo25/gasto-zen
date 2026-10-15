@@ -1,19 +1,17 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { DEFAULT_SETTINGS, getInitialTransactions } from '../constants/initialData';
-import {
-  calculateCategoryBreakdown,
-  calculateMonthProjection,
-  calculateWeeklyStats,
-  isSameMonth,
-  isSameWeek,
-} from '../utils/calculations';
+import { calculateCategoryBreakdown, calculateMonthProjection, calculateWeeklyStats, isSameMonth, isSameWeek, toDateKey } from '../utils/calculations';
 import { formatMoney as formatMoneyForCurrency, getCurrencySymbol } from '../utils/format';
-import { generateRecurringTransactions } from '../utils/recurrence';
+import { extendRecurringSeries, generateRecurringTransactions } from '../utils/recurrence';
 import { 
   DEFAULT_CARD_SETTINGS, 
   calculateCardSummary, 
-  generateInstallmentTransactions 
+  filterCardTransactions,
+  generateCardId,
+  generateInstallmentTransactions, 
+  migrateCards,
+  reassignTransactionsCardId,
 } from '../utils/cardCalculations';
 import { loadSettings, loadTransactions, saveSettings, saveTransactions } from '../utils/storage';
 
@@ -54,10 +52,24 @@ export function AppProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Chave do dia atual — atualizada a cada minuto para que a virada de mês
+  // recalculе tudo mesmo com o app aberto.
+  const [todayKey, setTodayKey] = useState(() => toDateKey(new Date()));
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const key = toDateKey(new Date());
+      setTodayKey((prev) => (prev === key ? prev : key));
+    }, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Modais
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
+  const [cardModalTargetId, setCardModalTargetId] = useState(null); // null = novo cartão
+  const [selectedCardId, setSelectedCardId] = useState(null);
   const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
@@ -76,10 +88,16 @@ export function AppProvider({ children }) {
         const loadedTxs = await loadTransactions(initialSeed);
         const loadedSett = await loadSettings(DEFAULT_SETTINGS);
 
-        setTransactions(loadedTxs);
+        // Estende séries recorrentes além do horizonte inicial (sem duplicar)
+        const { transactions: extendedTxs, added } = extendRecurringSeries(loadedTxs);
+        if (added.length > 0) {
+          saveTransactions(extendedTxs);
+        }
+        setTransactions(extendedTxs);
         setSettings(loadedSett);
         setIsDarkMode(loadedSett.isDarkMode ?? true);
         setCurrencyState(loadedSett.currency || 'BRL');
+        setSelectedCardId((prev) => prev ?? migrateCards(loadedSett)[0]?.id ?? null);
       } catch (e) {
         console.error('Erro ao inicializar dados:', e);
       } finally {
@@ -116,27 +134,89 @@ export function AppProvider({ children }) {
     [settings, updateSettings]
   );
 
-  // Configurações do Cartão de Crédito
-  const cardSettings = useMemo(() => {
-    return settings.card || DEFAULT_CARD_SETTINGS;
-  }, [settings]);
+  // Cartões de crédito (lista multi-cartão com migração do formato antigo)
+  const cards = useMemo(() => migrateCards(settings), [settings]);
 
-  const updateCardSettings = useCallback((newCardSettings) => {
-    updateSettings({ ...settings, card: newCardSettings });
-  }, [settings, updateSettings]);
+  const selectedCard = useMemo(() => {
+    return cards.find((c) => c.id === selectedCardId) || cards[0] || DEFAULT_CARD_SETTINGS;
+  }, [cards, selectedCardId]);
+
+  const selectCard = useCallback((cardId) => {
+    setSelectedCardId(cardId);
+  }, []);
+
+  const addCard = useCallback(
+    (card) => {
+      const newCard = { ...DEFAULT_CARD_SETTINGS, ...card, id: card.id || generateCardId() };
+      const next = [...cards, newCard];
+      updateSettings({ ...settings, cards: next });
+      setSelectedCardId(newCard.id);
+      return newCard;
+    },
+    [cards, settings, updateSettings]
+  );
+
+  const updateCard = useCallback(
+    (card) => {
+      if (!card?.id) return;
+      updateSettings({ ...settings, cards: cards.map((c) => (c.id === card.id ? { ...c, ...card } : c)) });
+    },
+    [cards, settings, updateSettings]
+  );
+
+  // Exclui o cartão realocando suas transações para o cartão restante.
+  // O último cartão não pode ser excluído.
+  const deleteCard = useCallback(
+    (cardId) => {
+      if (cards.length <= 1) return false;
+      const remaining = cards.filter((c) => c.id !== cardId);
+      if (remaining.length === cards.length) return false;
+      const toCardId = remaining[0].id;
+      updateTransactions(reassignTransactionsCardId(transactions, cards, cardId, toCardId));
+      updateSettings({ ...settings, cards: remaining });
+      setSelectedCardId((prev) => (prev === cardId ? toCardId : prev));
+      return true;
+    },
+    [cards, transactions, settings, updateSettings, updateTransactions]
+  );
+
+  const saveCard = useCallback(
+    (card) => {
+      if (card?.id && cards.some((c) => c.id === card.id)) {
+        updateCard(card);
+        return card;
+      }
+      return addCard(card);
+    },
+    [cards, addCard, updateCard]
+  );
+
+  const cardModalTarget = useMemo(() => {
+    if (!cardModalTargetId) return null;
+    return cards.find((c) => c.id === cardModalTargetId) || null;
+  }, [cards, cardModalTargetId]);
 
   // Ações de transação (recorrência expandida e parcelamento de cartão na criação)
   const handleAddTransaction = useCallback(
     (newTx) => {
       let occurrences = [];
       if (newTx.paymentMethod === 'credit' && Number(newTx.installmentsCount) > 1) {
-        occurrences = generateInstallmentTransactions(newTx, cardSettings);
+        const card = cards.find((c) => c.id === newTx.cardId) || selectedCard || cards[0];
+        occurrences = generateInstallmentTransactions(
+          { ...newTx, cardId: card?.id },
+          card || DEFAULT_CARD_SETTINGS
+        );
+      } else if (newTx.paymentMethod === 'credit') {
+        occurrences = generateRecurringTransactions({
+          ...newTx,
+          cardId: newTx.cardId || selectedCard?.id || cards[0]?.id,
+        });
       } else {
         occurrences = generateRecurringTransactions(newTx);
       }
       updateTransactions([...occurrences, ...transactions]);
     },
-    [transactions, updateTransactions, cardSettings]
+    [transactions, updateTransactions, cards, selectedCard]
   );
 
   const handleUpdateSingleTransaction = useCallback(
@@ -177,8 +257,14 @@ export function AppProvider({ children }) {
 
   const openSalaryModal = useCallback(() => setIsSalaryModalOpen(true), []);
   const closeSalaryModal = useCallback(() => setIsSalaryModalOpen(false), []);
-  const openCardModal = useCallback(() => setIsCardModalOpen(true), []);
-  const closeCardModal = useCallback(() => setIsCardModalOpen(false), []);
+  const openCardModal = useCallback((cardId = null) => {
+    setCardModalTargetId(cardId || null);
+    setIsCardModalOpen(true);
+  }, []);
+  const closeCardModal = useCallback(() => {
+    setIsCardModalOpen(false);
+    setCardModalTargetId(null);
+  }, []);
   const openCurrencyModal = useCallback(() => setIsCurrencyModalOpen(true), []);
   const closeCurrencyModal = useCallback(() => setIsCurrencyModalOpen(false), []);
 
@@ -217,7 +303,7 @@ export function AppProvider({ children }) {
   const formatMoney = useCallback((val) => formatMoneyForCurrency(val, currency), [currency]);
 
   // Lista ordenada por recência (passados recentes no topo, futuros ao final)
-  const sortedTransactions = useMemo(() => sortByRecency(transactions), [transactions]);
+  const sortedTransactions = useMemo(() => sortByRecency(transactions), [transactions, todayKey]);
 
   const monthCalculations = useMemo(() => {
     const now = new Date();
@@ -238,28 +324,75 @@ export function AppProvider({ children }) {
       balance: income - expense,
       count: monthTxs.length,
     };
-  }, [sortedTransactions]);
+  }, [sortedTransactions, todayKey]);
 
-  const weeklyStats = useMemo(() => calculateWeeklyStats(sortedTransactions), [sortedTransactions]);
+  const weeklyStats = useMemo(() => calculateWeeklyStats(sortedTransactions), [sortedTransactions, todayKey]);
 
   const monthProjection = useMemo(
     () => calculateMonthProjection(sortedTransactions, settings),
-    [sortedTransactions, settings]
+    [sortedTransactions, settings, todayKey]
   );
 
   const categoryBreakdownMonth = useMemo(
     () => calculateCategoryBreakdown(sortedTransactions, 'month'),
-    [sortedTransactions]
+    [sortedTransactions, todayKey]
   );
 
   const categoryBreakdownWeek = useMemo(
     () => calculateCategoryBreakdown(sortedTransactions, 'week'),
-    [sortedTransactions]
+    [sortedTransactions, todayKey]
   );
 
-  const cardSummary = useMemo(
-    () => calculateCardSummary(sortedTransactions, cardSettings),
-    [sortedTransactions, cardSettings]
+  // Resumo por cartão (transações legadas sem cardId caem no primeiro cartão)
+  const cardSummaries = useMemo(() => {
+    const firstCardId = cards[0]?.id || null;
+    return cards.map((card) => ({
+      card,
+      summary: calculateCardSummary(
+        filterCardTransactions(sortedTransactions, card.id, firstCardId),
+        card
+      ),
+    }));
+  }, [sortedTransactions, cards, todayKey]);
+
+  // Resumo global consolidado (soma de todos os cartões)
+  const cardSummary = useMemo(() => {
+    const totals = cardSummaries.reduce(
+      (acc, { card, summary }) => ({
+        currentInvoiceAmount: acc.currentInvoiceAmount + summary.currentInvoiceAmount,
+        futureDebtRemaining: acc.futureDebtRemaining + summary.futureDebtRemaining,
+        totalCommitted: acc.totalCommitted + summary.totalCommitted,
+        cardLimit: acc.cardLimit + (Number(card.limit) || 0),
+        totalSpentOnCard: acc.totalSpentOnCard + summary.totalSpentOnCard,
+        activeInstallments: [...acc.activeInstallments, ...summary.activeInstallments],
+        subscriptions: [...acc.subscriptions, ...summary.subscriptions],
+      }),
+      {
+        currentInvoiceAmount: 0,
+        futureDebtRemaining: 0,
+        totalCommitted: 0,
+        cardLimit: 0,
+        totalSpentOnCard: 0,
+        activeInstallments: [],
+        subscriptions: [],
+      }
+    );
+
+    const availableLimit = Math.max(0, totals.cardLimit - totals.totalCommitted);
+    const limitUsedPct =
+      totals.cardLimit > 0 ? Math.min(100, Math.round((totals.totalCommitted / totals.cardLimit) * 100)) : 0;
+
+    return { ...totals, availableLimit, limitUsedPct };
+  }, [cardSummaries]);
+
+  const getCardForTransaction = useCallback(
+    (tx) => {
+      if (!tx || tx.paymentMethod !== 'credit') return null;
+      const firstCardId = cards[0]?.id || null;
+      const cardId = tx.cardId || firstCardId;
+      return cards.find((c) => c.id === cardId) || null;
+    },
+    [cards]
   );
 
   const filteredTransactions = useMemo(() => {
@@ -278,7 +411,7 @@ export function AppProvider({ children }) {
 
       return true;
     });
-  }, [sortedTransactions, historyPeriodFilter, historyTypeFilter, searchQuery]);
+  }, [sortedTransactions, historyPeriodFilter, historyTypeFilter, searchQuery, todayKey]);
 
   // Salário semanal estimado (usa o salário base, mas se recebeu renda extra na semana, expande o orçamento!)
   const weeklySalaryEstimated = useMemo(() => {
@@ -316,10 +449,18 @@ export function AppProvider({ children }) {
     formatMoney,
 
     // Cartões & Faturas
-    cardSettings,
-    updateCardSettings,
+    cards,
+    selectedCard,
+    selectCard,
+    cardSummaries,
     cardSummary,
+    saveCard,
+    addCard,
+    updateCard,
+    deleteCard,
+    getCardForTransaction,
     isCardModalOpen,
+    cardModalTarget,
     openCardModal,
     closeCardModal,
 

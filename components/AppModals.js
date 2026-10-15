@@ -27,8 +27,10 @@ export default function AppModals() {
     closeSalaryModal,
     isCardModalOpen,
     closeCardModal,
-    cardSettings,
-    updateCardSettings,
+    cards,
+    cardModalTarget,
+    saveCard,
+    deleteCard,
     isCurrencyModalOpen,
     closeCurrencyModal,
     selectCurrency,
@@ -51,15 +53,17 @@ export default function AppModals() {
         transactionToEdit={editingTransaction}
         theme={theme}
         currencySymbol={currencySymbol}
-        cardSettings={cardSettings}
+        cards={cards}
       />
 
       <CardConfigModal
-        key={isCardModalOpen ? 'card-open' : 'card-closed'}
+        key={isCardModalOpen ? (cardModalTarget ? cardModalTarget.id : 'card-new') : 'card-closed'}
         visible={isCardModalOpen}
         onClose={closeCardModal}
-        cardSettings={cardSettings}
-        onSaveCardSettings={updateCardSettings}
+        card={cardModalTarget}
+        onSaveCard={saveCard}
+        onDeleteCard={deleteCard}
+        canDelete={cards.length > 1}
         theme={theme}
         currencySymbol={currencySymbol}
       />

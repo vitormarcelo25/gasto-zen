@@ -1,5 +1,6 @@
 import {
   generateRecurringTransactions,
+  extendRecurringSeries,
   addMonthsClamped,
   generateId,
   RECURRENCE_HORIZON_MONTHS,
@@ -106,5 +107,76 @@ describe('generateRecurringTransactions', () => {
   it('respeita horizonte personalizado', () => {
     const result = generateRecurringTransactions(baseTx({ recurrence: 'monthly' }), 2);
     expect(result).toHaveLength(3);
+  });
+});
+
+describe('extendRecurringSeries', () => {
+  it('estende série mensal antiga até o novo horizonte', () => {
+    // Série criada em jan/2026, com ocorrências até jul/2026 (6 meses).
+    // Referência: out/2026 — precisa estender até abr/2027.
+    const oldTx = baseTx({
+      recurrence: 'monthly',
+      seriesId: 'tx-base',
+      date: new Date(2026, 0, 10, 12).toISOString(),
+    });
+    const existing = generateRecurringTransactions(oldTx); // jan..jul 2026
+
+    const ref = new Date(2026, 9, 15, 12); // 15/out/2026
+    const { transactions: result, added } = extendRecurringSeries(existing, 6, ref);
+
+    // Última ocorrência existente: 10/jul/2026 → estende até 10/abr/2027 (limite: 15/abr/2027)
+    expect(added.length).toBe(9); // ago, set, out, nov, dez 2026 + jan..abr 2027
+    expect(result.length).toBe(existing.length + added.length);
+
+    // Sem duplicatas por dia
+    const keys = result.map((t) => {
+      const d = new Date(t.date);
+      return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    });
+    expect(new Set(keys).size).toBe(keys.length);
+
+    // Ocorrências herdam campos da série
+    added.forEach((t) => {
+      expect(t.seriesId).toBe('tx-base');
+      expect(t.amount).toBe(100);
+      expect(t.id).not.toBe('tx-base');
+    });
+  });
+
+  it('não duplica ocorrências que já existem', () => {
+    const monthly = generateRecurringTransactions(
+      baseTx({ recurrence: 'monthly', seriesId: 'tx-base' })
+    );
+    // Série vai até 12/abr/2027; horizonte a partir de 15/out/2026 termina em 15/abr/2027
+    const ref = new Date(2026, 9, 15);
+    const { transactions: result, added } = extendRecurringSeries(monthly, 6, ref);
+    expect(added).toHaveLength(0);
+    expect(result).toBe(monthly);
+  });
+
+  it('ignora transações únicas e listas vazias', () => {
+    const single = [baseTx()];
+    const r1 = extendRecurringSeries(single);
+    expect(r1.added).toHaveLength(0);
+    expect(r1.transactions).toBe(single);
+
+    const r2 = extendRecurringSeries([]);
+    expect(r2.added).toHaveLength(0);
+    expect(r2.transactions).toEqual([]);
+  });
+
+  it('estende série semanal pelo dia da semana correto', () => {
+    const weekly = generateRecurringTransactions(
+      baseTx({ recurrence: 'weekly', seriesId: 'tx-base' })
+    );
+    // Ocorrências iniciais: 12/out/2026 + 6 meses
+    const ref = new Date(2027, 2, 15, 12); // 15/mar/2027 (além do horizonte inicial)
+    const { added } = extendRecurringSeries(weekly, 2, ref);
+
+    expect(added.length).toBeGreaterThan(0);
+    const baseDay = new Date(2026, 9, 12).getDay();
+    added.forEach((t) => {
+      expect(new Date(t.date).getDay()).toBe(baseDay);
+    });
   });
 });

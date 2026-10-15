@@ -13,7 +13,10 @@ export default function CardsScreen() {
   const {
     theme,
     formatMoney,
-    cardSettings,
+    cards,
+    selectedCard,
+    selectCard,
+    cardSummaries,
     cardSummary,
     openCardModal,
     openAddTransaction,
@@ -23,16 +26,28 @@ export default function CardsScreen() {
 
   const [activeSubTab, setActiveSubTab] = useState('installments'); // 'installments' | 'invoice' | 'subscriptions'
 
+  const cardSettings = selectedCard;
+  const activeSummary =
+    cardSummaries.find((s) => s.card.id === cardSettings?.id)?.summary || cardSummary;
+
   const {
-    currentInvoiceAmount,
     futureDebtRemaining,
-    totalCommitted,
-    availableLimit,
-    cardLimit,
-    limitUsedPct,
     activeInstallments,
     subscriptions,
   } = cardSummary;
+
+  const activeCard = {
+    currentInvoiceAmount: activeSummary.currentInvoiceAmount,
+    availableLimit: activeSummary.availableLimit,
+    cardLimit: activeSummary.cardLimit,
+    limitUsedPct: activeSummary.limitUsedPct,
+  };
+
+  const cardBadgeInfo = (cardId) => {
+    const firstCardId = cards[0]?.id || null;
+    const card = cards.find((c) => c.id === (cardId || firstCardId));
+    return card ? { name: card.name, color: card.color } : { name: 'Cartão', color: theme.indigo };
+  };
 
   return (
     <ScrollView
@@ -40,6 +55,51 @@ export default function CardsScreen() {
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
+      {/* SELETOR DE CARTÕES */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.cardSelectorScroll}
+        contentContainerStyle={styles.cardSelectorRow}
+      >
+        {cards.map((c) => {
+          const isSelected = c.id === cardSettings?.id;
+          return (
+            <TouchableOpacity
+              key={c.id}
+              onPress={() => selectCard(c.id)}
+              activeOpacity={0.8}
+              style={[
+                styles.cardChip,
+                {
+                  backgroundColor: isSelected ? c.color + '25' : theme.card,
+                  borderColor: isSelected ? c.color : theme.border,
+                },
+              ]}
+            >
+              <View style={[styles.cardChipDot, { backgroundColor: c.color }]} />
+              <Text
+                style={[
+                  styles.cardChipText,
+                  { color: isSelected ? c.color : theme.textSub },
+                ]}
+                numberOfLines={1}
+              >
+                {c.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+        <TouchableOpacity
+          onPress={() => openCardModal(null)}
+          activeOpacity={0.8}
+          style={[styles.cardChip, styles.addCardChip, { backgroundColor: theme.card, borderColor: theme.border, borderStyle: 'dashed' }]}
+        >
+          <Feather name="plus" size={13} color={theme.textSub} />
+          <Text style={[styles.cardChipText, { color: theme.textSub }]}>Novo</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
       {/* CARTÃO VIRTUAL VISUAL ZEN */}
       <View
         style={[
@@ -57,7 +117,7 @@ export default function CardsScreen() {
             <Feather name="wifi" size={16} color="rgba(255,255,255,0.7)" style={{ transform: [{ rotate: '90deg' }] }} />
           </View>
           <TouchableOpacity
-            onPress={openCardModal}
+            onPress={() => openCardModal(cardSettings?.id || null)}
             style={styles.cardConfigBtn}
             activeOpacity={0.8}
           >
@@ -72,7 +132,7 @@ export default function CardsScreen() {
         {/* Fatura Atual em Destaque */}
         <View style={styles.invoiceHighlight}>
           <Text style={styles.invoiceLabel}>FATURA DO MÊS ATUAL</Text>
-          <Text style={styles.invoiceValue}>{formatMoney(currentInvoiceAmount)}</Text>
+          <Text style={styles.invoiceValue}>{formatMoney(activeCard.currentInvoiceAmount)}</Text>
           <View style={styles.invoiceDatesPill}>
             <Feather name="calendar" size={11} color="rgba(255,255,255,0.85)" />
             <Text style={styles.invoiceDatesText}>
@@ -84,16 +144,16 @@ export default function CardsScreen() {
         {/* Barra de Limite */}
         <View style={styles.cardLimitSection}>
           <View style={styles.limitInfoRow}>
-            <Text style={styles.limitLabel}>Limite Disponível: {formatMoney(availableLimit)}</Text>
-            <Text style={styles.limitTotal}>Total: {formatMoney(cardLimit)}</Text>
+            <Text style={styles.limitLabel}>Limite Disponível: {formatMoney(activeCard.availableLimit)}</Text>
+            <Text style={styles.limitTotal}>Total: {formatMoney(activeCard.cardLimit)}</Text>
           </View>
           <View style={styles.limitTrack}>
-            <View style={[styles.limitFill, { width: `${limitUsedPct}%` }]} />
+            <View style={[styles.limitFill, { width: `${activeCard.limitUsedPct}%` }]} />
           </View>
         </View>
       </View>
 
-      {/* MÉTRICAS DE DÍVIDAS & PARCELAMENTOS */}
+      {/* MÉTRICAS DE DÍVIDAS & PARCELAMENTOS (consolidado de todos os cartões) */}
       <View style={styles.metricsRow}>
         <View style={[styles.metricCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <View style={styles.metricHeader}>
@@ -121,7 +181,7 @@ export default function CardsScreen() {
             {activeInstallments.length} {activeInstallments.length === 1 ? 'compra' : 'compras'}
           </Text>
           <Text style={[styles.metricSub, { color: theme.textSub }]}>
-            Comprometendo faturas
+            Em {cards.length} {cards.length === 1 ? 'cartão' : 'cartões'}
           </Text>
         </View>
       </View>
@@ -200,9 +260,13 @@ export default function CardsScreen() {
                     <Text style={[styles.installmentName, { color: theme.textMain }]}>
                       {item.description}
                     </Text>
-                    <Text style={[styles.installmentCategory, { color: theme.textSub }]}>
-                      {item.category || 'Cartão de Crédito'}
-                    </Text>
+                    <View style={styles.cardBadgeRow}>
+                      <View style={[styles.cardBadgeDot, { backgroundColor: cardBadgeInfo(item.cardId).color }]} />
+                      <Text style={[styles.installmentCategory, { color: theme.textSub }]}>
+                        {cardBadgeInfo(item.cardId).name}
+                        {item.category ? ` • ${item.category}` : ''}
+                      </Text>
+                    </View>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={[styles.installmentMonthlyAmt, { color: theme.textMain }]}>
@@ -273,9 +337,12 @@ export default function CardsScreen() {
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={[styles.subTitle, { color: theme.textMain }]}>{sub.description}</Text>
-                  <Text style={[styles.subMeta, { color: theme.textSub }]}>
-                    Todo mês na fatura • {sub.category || 'Geral'}
-                  </Text>
+                  <View style={styles.cardBadgeRow}>
+                    <View style={[styles.cardBadgeDot, { backgroundColor: cardBadgeInfo(sub.cardId).color }]} />
+                    <Text style={[styles.subMeta, { color: theme.textSub }]}>
+                      {cardBadgeInfo(sub.cardId).name} • Todo mês na fatura • {sub.category || 'Geral'}
+                    </Text>
+                  </View>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={[styles.subPrice, { color: theme.red }]}>{formatMoney(sub.amount)}</Text>
@@ -301,6 +368,46 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingTop: 12,
+  },
+  cardSelectorScroll: {
+    marginBottom: 14,
+  },
+  cardSelectorRow: {
+    gap: 8,
+    alignItems: 'center',
+  },
+  cardChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  addCardChip: {
+    borderStyle: 'dashed',
+  },
+  cardChipDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  cardChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    maxWidth: 110,
+  },
+  cardBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 2,
+  },
+  cardBadgeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
   creditCardBox: {
     borderRadius: 24,

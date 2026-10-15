@@ -35,7 +35,7 @@ export default function TransactionModal({
   transactionToEdit = null,
   theme, 
   currencySymbol,
-  cardSettings = null 
+  cards = [] 
 }) {
   // O modal é remontado a cada abertura (key em AppModals),
   // então o estado inicial deriva direto das props.
@@ -56,6 +56,10 @@ export default function TransactionModal({
     return 'single';
   }); // 'single' | 'installment' | 'subscription'
   const [installmentsCount, setInstallmentsCount] = useState(transactionToEdit?.installmentsCount || 3);
+  const [cardId, setCardId] = useState(() => {
+    if (transactionToEdit?.cardId) return transactionToEdit.cardId;
+    return cards[0]?.id || null;
+  });
   const [dateChoice, setDateChoice] = useState(() => resolveDateChoice(transactionToEdit));
   const [recurrence, setRecurrence] = useState(transactionToEdit?.recurrence || 'single'); // 'single' | 'weekly' | 'monthly'
 
@@ -127,6 +131,7 @@ export default function TransactionModal({
       paymentMethod: type === 'expense' ? paymentMethod : 'cash',
       installmentsCount: isInstallment ? installmentsCount : 1,
       isSubscription: isSubscription,
+      cardId: isCredit ? cardId : undefined,
     };
 
     if (transactionToEdit && onUpdateTransaction) {
@@ -313,9 +318,34 @@ export default function TransactionModal({
                 {/* Opções de Cartão de Crédito */}
                 {paymentMethod === 'credit' && (
                   <View style={[styles.creditOptionsCard, { backgroundColor: theme.bg, borderColor: theme.border }]}>
-                    <Text style={[styles.subSectionTitle, { color: theme.textMain }]}>
-                      Condição no Cartão ({cardSettings?.name || 'Meu Cartão'})
-                    </Text>
+                    {/* Seletor de Cartão */}
+                    {cards.length > 0 && (
+                      <View style={{ marginBottom: 8 }}>
+                        <Text style={[styles.subSectionTitle, { color: theme.textMain }]}>QUAL CARTÃO?</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
+                          {cards.map((c) => (
+                            <TouchableOpacity
+                              key={c.id}
+                              onPress={() => setCardId(c.id)}
+                              style={[
+                                styles.installmentChip,
+                                {
+                                  backgroundColor: cardId === c.id ? c.color : theme.card,
+                                  borderColor: cardId === c.id ? c.color : theme.border,
+                                },
+                              ]}
+                            >
+                              <View style={[styles.cardChipDot, { backgroundColor: cardId === c.id ? '#FFF' : c.color }]} />
+                              <Text style={[styles.installmentChipText, { color: cardId === c.id ? '#FFF' : theme.textMain }]}>
+                                {c.name}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    )}
+
+                    <Text style={[styles.subSectionTitle, { color: theme.textMain }]}>Condição no Cartão</Text>
                     <View style={[styles.smallToggle, { backgroundColor: theme.card, marginTop: 6 }]}>
                       <TouchableOpacity
                         onPress={() => setCreditMode('single')}
@@ -389,6 +419,17 @@ export default function TransactionModal({
                         💡 Cobrança fixa mensal na fatura do cartão (ex: Netflix, Spotify, academia).
                       </Text>
                     )}
+
+                    {/* Ciclo da fatura do cartão selecionado */}
+                    {(() => {
+                      const selected = cards.find((c) => c.id === cardId);
+                      if (!selected) return null;
+                      return (
+                        <Text style={[styles.creditHintText, { color: theme.textSub, marginTop: 8 }]}>
+                          📅 {selected.name}: fecha dia {selected.closingDay} • vence dia {selected.dueDay}
+                        </Text>
+                      );
+                    })()}
                   </View>
                 )}
               </>
@@ -655,8 +696,14 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   installmentChipText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 'bold',
+  },
+  cardChipDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginRight: 6,
   },
   installmentPreview: {
     flexDirection: 'row',

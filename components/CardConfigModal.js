@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import CurrencyInput from './CurrencyInput';
@@ -25,37 +26,31 @@ const CARD_COLORS = [
 export default function CardConfigModal({
   visible,
   onClose,
-  cardSettings,
-  onSaveCardSettings,
+  card = null, // cartão em edição ou null para novo
+  onSaveCard,
+  onDeleteCard,
+  canDelete = false,
   theme,
   currencySymbol,
 }) {
-  const [name, setName] = useState('Meu Cartão');
-  const [closingDay, setClosingDay] = useState('10');
-  const [dueDay, setDueDay] = useState('17');
-  const [limit, setLimit] = useState('');
-  const [limitFloat, setLimitFloat] = useState(2500);
-  const [color, setColor] = useState('#6366F1');
+  // O modal é remontado a cada abertura (key em AppModals),
+  // então o estado inicial deriva direto das props (sem efeitos).
+  const [name, setName] = useState(card?.name || 'Meu Cartão');
+  const [closingDay, setClosingDay] = useState(String(card?.closingDay ?? 10));
+  const [dueDay, setDueDay] = useState(String(card?.dueDay ?? 17));
+  const [limit, setLimit] = useState(() => floatToMasked(Number(card?.limit) || 2500));
+  const [limitFloat, setLimitFloat] = useState(() => Number(card?.limit) || 2500);
+  const [color, setColor] = useState(card?.color || '#6366F1');
 
-  useEffect(() => {
-    if (visible && cardSettings) {
-      setName(cardSettings.name || 'Meu Cartão');
-      setClosingDay(String(cardSettings.closingDay || 10));
-      setDueDay(String(cardSettings.dueDay || 17));
-      const lim = Number(cardSettings.limit) || 2500;
-      setLimit(floatToMasked(lim));
-      setLimitFloat(lim);
-      setColor(cardSettings.color || '#6366F1');
-    }
-  }, [visible, cardSettings]);
+  const isEditing = !!card;
 
   const handleSave = () => {
     const finalLimit = limitFloat > 0 ? limitFloat : maskedToFloat(limit);
     const parsedClosing = Math.max(1, Math.min(31, parseInt(closingDay || 10, 10)));
     const parsedDue = Math.max(1, Math.min(31, parseInt(dueDay || 17, 10)));
 
-    onSaveCardSettings({
-      ...cardSettings,
+    onSaveCard({
+      ...(card || {}),
       name: name.trim() || 'Meu Cartão',
       closingDay: parsedClosing,
       dueDay: parsedDue,
@@ -66,6 +61,25 @@ export default function CardConfigModal({
     onClose();
   };
 
+  const handleDelete = () => {
+    if (!card || !onDeleteCard) return;
+    Alert.alert(
+      'Excluir cartão',
+      `Excluir "${card.name}"? As compras deste cartão passam para o cartão principal.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: () => {
+            onDeleteCard(card.id);
+            onClose();
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <View style={styles.overlay}>
@@ -74,7 +88,9 @@ export default function CardConfigModal({
             {/* Header */}
             <View style={styles.header}>
               <View>
-                <Text style={[styles.title, { color: theme.textMain }]}>Configurar Cartão de Crédito</Text>
+                <Text style={[styles.title, { color: theme.textMain }]}>
+                  {isEditing ? 'Editar Cartão' : 'Novo Cartão de Crédito'}
+                </Text>
                 <Text style={[styles.subtitle, { color: theme.textSub }]}>
                   Ciclos de fatura, limite e parcelamentos
                 </Text>
@@ -186,6 +202,17 @@ export default function CardConfigModal({
               <Text style={styles.saveBtnText}>Salvar Cartão</Text>
             </TouchableOpacity>
 
+            {/* Botão Excluir (somente ao editar) */}
+            {isEditing && canDelete && (
+              <TouchableOpacity
+                style={[styles.deleteBtn, { borderColor: theme.red }]}
+                onPress={handleDelete}
+              >
+                <Feather name="trash-2" size={16} color={theme.red} style={{ marginRight: 8 }} />
+                <Text style={[styles.deleteBtnText, { color: theme.red }]}>Excluir Cartão</Text>
+              </TouchableOpacity>
+            )}
+
             <View style={{ height: 16 }} />
           </ScrollView>
         </View>
@@ -283,5 +310,18 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  deleteBtn: {
+    flexDirection: 'row',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  deleteBtnText: {
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 });
