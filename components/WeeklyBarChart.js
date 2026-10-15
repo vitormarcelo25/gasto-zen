@@ -154,10 +154,15 @@ export default function WeeklyBarChart({ weeklyStats, theme, formatMoney, dailyB
               ]}
             />
           </View>
-          <Text style={[styles.budgetText, { color: theme.textSub }]}>
-            <Text style={{ color: theme.textMain, fontWeight: '700' }}>{Math.round(budgetUsedPct)}%</Text>
-            {' '}do orçamento semanal de {formatMoney(weeklyBudget)}
-          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+            <Text style={[styles.budgetText, { color: theme.textSub, marginTop: 0 }]}>
+              <Text style={{ color: theme.textMain, fontWeight: '700' }}>{Math.round(budgetUsedPct)}%</Text>
+              {' '}do orçamento ({formatMoney(weeklyBudget)}/sem)
+            </Text>
+            <Text style={{ fontSize: 11, color: theme.yellow, fontWeight: '700' }}>
+              Meta: {formatMoney(dailyBudget)}/dia
+            </Text>
+          </View>
         </View>
       )}
 
@@ -190,7 +195,7 @@ export default function WeeklyBarChart({ weeklyStats, theme, formatMoney, dailyB
             <View style={[styles.limitLine, { bottom: toH(dailyBudget) }]} pointerEvents="none">
               <DottedLine color={theme.yellow} />
               <View style={[styles.limitPill, { backgroundColor: theme.yellow }]}>
-                <Text style={styles.limitPillText}>limite {compact(dailyBudget)}</Text>
+                <Text style={styles.limitPillText}>limite {formatMoney(dailyBudget)}</Text>
               </View>
             </View>
           )}
