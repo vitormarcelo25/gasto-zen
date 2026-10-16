@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Alert, ScrollView 
+  View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Alert, ScrollView, KeyboardAvoidingView, Platform 
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants/categories';
@@ -193,9 +193,12 @@ export default function TransactionModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <View style={[styles.content, { backgroundColor: theme.card, borderTopColor: theme.border }]}>
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {/* Header */}
             <View style={styles.header}>
               <View>
@@ -623,7 +626,7 @@ export default function TransactionModal({
             <View style={{ height: 20 }} />
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
